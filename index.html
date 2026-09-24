@@ -31,6 +31,7 @@ audio{width:100%;margin-top:10px}
 .vote button{flex:0 0 auto;padding:4px 8px;font-size:16px;background:#0b1222;opacity:.55}
 .vote button.on{opacity:1;background:#334155;outline:2px solid var(--accent)}
 .hint{font-size:11px;color:var(--sub);font-weight:400}
+.basis{font-size:12px;color:#fde68a;background:#1f2937;border-radius:8px;padding:6px 8px;margin-top:6px}
 .banner{background:#1e293b;border-left:4px solid var(--warn);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px}
 .banner.bad{border-left-color:#ef4444}
 .runs{margin-top:24px;color:var(--sub);font-size:13px}
@@ -101,6 +102,7 @@ function propCard(p) {
     <h3>${esc(p.title)}</h3>
     <p>${esc(p.what)}</p>
     <p class="how">${esc(p.how)}</p>
+    ${p.basis ? `<div class="basis">🔗 ${esc(p.basis)}</div>` : ""}
     <div class="meta">対象：${esc(p.target || "-")}　目安：${esc(p.effort || "-")}</div>
     ${p.result_note ? `<div class="note">${esc(p.result_note)}</div>` : ""}
     ${actionable ? `<div class="btns"><button class="go" data-s="approved">いいね、やって</button><button data-s="later">あとで</button><button data-s="rejected">いらない</button></div>` : ""}
@@ -195,7 +197,10 @@ function render() {
   if (!ep) { $("#root").innerHTML = `<header><h1>AIニュース</h1><button id="reload" style="flex:0 0 auto">更新</button></header>${tabs()}${missingBanner()}<p class="empty">まだ動画がありません。明日の朝をお楽しみに。</p>${runsLog()}`; return bindCommon({}, ""); }
   const mine = state.proposals.filter((p) => (p.series || "daily") === "daily");
   const props = mine.filter((p) => p.episode_date === ep.date);
-  const inflight = mine.filter((p) => p.episode_date !== ep.date && INFLIGHT.includes(p.status));
+  const combos = state.proposals.filter((p) => p.series === "combo");
+  const latestCombo = combos.map((p) => p.episode_date).sort().pop();
+  const comboNew = combos.filter((p) => p.episode_date === latestCombo && p.status === "proposed");
+  const inflight = [...mine.filter((p) => p.episode_date !== ep.date), ...combos].filter((p) => INFLIGHT.includes(p.status));
   const past = state.episodes.filter((e) => e.date !== ep.date);
   const d = new Date(ep.date + "T00:00:00");
   $("#root").innerHTML = `
@@ -206,6 +211,7 @@ function render() {
     ${player(ep)}
     <h2>今日の提案</h2>
     ${props.length ? props.map(propCard).join("") : `<p class="empty">提案はありません</p>`}
+    ${comboNew.length ? `<h2>🔗 掛け合わせ提案 <small class="hint">週1回・貯まった材料から</small></h2>${comboNew.map(propCard).join("")}` : ""}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
     <h2>ニュースの中身 <small class="hint">👍👎で好みを覚えます</small></h2>
     ${(ep.topics || []).map((t, i) => `<div class="topic"><div class="vote" data-no="${i + 1}"><button data-v="1" class="${voteOf(ep.date, i + 1) === 1 ? "on" : ""}">👍</button><button data-v="-1" class="${voteOf(ep.date, i + 1) === -1 ? "on" : ""}">👎</button></div>${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
