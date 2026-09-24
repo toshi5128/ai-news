@@ -37,10 +37,10 @@ audio{width:100%;margin-top:10px}
 .runs summary{cursor:pointer;padding:8px 0}
 .run{padding:6px 0;border-top:1px solid #1e293b}
 .tabs{display:flex;gap:6px;margin:0 0 14px}
-.tabs button{flex:1;padding:9px;font-size:14px;background:var(--card)}
+.tabs button{flex:1;padding:9px 4px;font-size:13px;background:var(--card);white-space:nowrap}
 .tabs button.on{background:var(--accent);color:#0f172a;font-weight:700}
 .disclaimer{font-size:12px;color:var(--sub);text-align:center;margin:14px 0}
-.k-rates{background:#f87171}.k-stocks{background:#a78bfa}.k-fx{background:#2dd4bf}.k-market{background:#fbbf24}
+.k-rates{background:#f87171}.k-stocks{background:#a78bfa}.k-fx{background:#2dd4bf}.k-market{background:#fbbf24}.k-nisa{background:#f472b6}.k-phone{background:#60a5fa}.k-app{background:#38bdf8}.k-life{background:#4ade80}
 .k-ai{background:#38bdf8}.k-realestate{background:#fbbf24}.k-tools{background:#4ade80}
 .prop{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid #334155}
 .prop h3{margin:0 0 6px;font-size:16px}
@@ -69,7 +69,7 @@ button.go{background:var(--accent);color:#0f172a;font-weight:700;flex:2}
 <script>
 const API = "https://aevqdsozxiklyjfavvhf.supabase.co/functions/v1/api";
 const LABEL = {approved:"承認済み・作成待ち",building:"作成中…",built:"できました・確認待ち",failed:"作成でつまずきました",rejected:"見送り",later:"あとで",deployed:"反映済み"};
-const KIND = { ai: "AI", realestate: "不動産", tools: "使っている道具", rates: "金利", stocks: "株", fx: "為替", market: "不動産市場" };
+const KIND = { ai: "AI", realestate: "不動産", tools: "使っている道具", rates: "金利", stocks: "株", fx: "為替", market: "不動産市場", nisa: "NISA・制度", phone: "スマホ", app: "AIアプリ", life: "暮らし" };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -79,7 +79,7 @@ function getKey() {
   try { return localStorage.getItem("aiNewsKey"); } catch { return null; }
 }
 let KEY = getKey();
-let state = { episodes: [], proposals: [], runs: [], votes: [], current: null, money: [], moneyCurrent: null, tab: null };
+let state = { episodes: [], proposals: [], runs: [], votes: [], current: null, series: {}, seriesPick: {}, tab: "daily" };
 
 async function api(action, body = {}) {
   const r = await fetch(API, { method: "POST", headers: { "content-type": "application/json", "x-key": KEY }, body: JSON.stringify({ action, ...body }) });
@@ -124,16 +124,17 @@ function missingBanner() {
 
 function runsLog() {
   if (!state.runs.length) return "";
-  const KL = { daily: "毎朝の動画", build: "提案の作成", money: "週末マネー" }, SL = { ok: "✅", fail: "❌", skip: "–" };
+  const KL = { daily: "毎朝の動画", build: "提案の作成", money: "お金・NISA", life: "暮らしのAI" }, SL = { ok: "✅", fail: "❌", skip: "–" };
   return `<details class="runs"><summary>動作記録（直近${Math.min(state.runs.length, 14)}件）</summary>${state.runs.slice(0, 14).map((r) =>
     `<div class="run">${SL[r.status] || r.status} ${esc(hm(r.created_at))} ${KL[r.kind] || r.kind}${r.seconds ? `・${Math.round(r.seconds / 60)}分` : ""}<br><small>${esc(r.note || "")}</small></div>`).join("")}</details>`;
 }
 
 function voteOf(date, no) { return state.votes.find((v) => v.episode_date === date && v.topic_no === no)?.vote || 0; }
 
-// タブ: 毎朝ニュース / 週末マネー(土曜朝だけ)
+// タブ: 仕事(不動産×AI) / お金・NISA / 暮らしのAI。どれも毎朝届く
 function tabs() {
-  return `<nav class="tabs"><button data-tab="daily" class="${state.tab === "daily" ? "on" : ""}">毎朝ニュース</button><button data-tab="money" class="${state.tab === "money" ? "on" : ""}">週末マネー</button></nav>`;
+  const T = [["daily", "仕事"], ["money", "お金・NISA"], ["life", "暮らしのAI"]];
+  return `<nav class="tabs">${T.map(([k, l]) => `<button data-tab="${k}" class="${state.tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>`;
 }
 const srcLink = (t) => t.source ? `<div class="src">出典：${t.url && /^https?:\/\//.test(t.url) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.source)}</a>` : esc(t.source)}</div>` : "";
 const player = (ep) => `${ep.video_url ? `<video controls playsinline preload="metadata" poster="${esc(ep.thumb_url || "")}" src="${esc(ep.video_url)}"></video>` : `<p class="empty">この回の動画は保存期間(30日)を過ぎました</p>`}
@@ -153,30 +154,37 @@ function bindCommon(ep, artist) {
   };
 }
 
-function renderMoney() {
-  const ep = state.moneyCurrent;
+// 仕事タブ以外の見せ方。タブを増やす時はここと tabs() に足す
+const SERIES = {
+  money: { label: "お金・NISA", heading: "今日の動き", use: "下田さん目線", empty: "毎朝、株・金利・為替・NISAの動きを、NISAの長期目線と不動産の仕事目線で届けます。",
+    note: "情報の整理です。特定の投資をすすめるものではありません。" },
+  life: { label: "暮らしのAI", heading: "今日の3つ", use: "やってみる手順", empty: "毎朝、仕事以外の毎日がちょっと楽になるAIの使い方を3つ届けます。", note: "" },
+};
+
+function renderSeries(name) {
+  const cfg = SERIES[name], list = state.series[name] || [];
+  const ep = list.find((e) => e.date === state.seriesPick[name]) || list[0];
   if (!ep) {
-    $("#root").innerHTML = `<header><h1>週末マネー</h1><button id="reload" style="flex:0 0 auto">更新</button></header>${tabs()}
-      <p class="empty">毎週土曜の朝に、1週間のお金の動き（金利・株・為替・不動産市場）と不動産への影響をまとめて届けます。</p>`;
+    $("#root").innerHTML = `<header><h1>${cfg.label}</h1><button id="reload" style="flex:0 0 auto">更新</button></header>${tabs()}<p class="empty">${cfg.empty}</p>`;
     return bindCommon({}, "");
   }
-  const past = state.money.filter((e) => e.date !== ep.date);
+  const past = list.filter((e) => e.date !== ep.date);
   const d = new Date(ep.date + "T00:00:00");
   $("#root").innerHTML = `
     <header><div><h1>${esc(ep.title)}</h1><div class="date">${d.getMonth() + 1}月${d.getDate()}日・約${Math.round((ep.duration_sec || 0) / 60)}分</div></div>
       <button id="reload" style="flex:0 0 auto">更新</button></header>
     ${tabs()}
     ${player(ep)}
-    <h2>今週の動き</h2>
-    ${(ep.topics || []).map((t) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ 不動産への影響：${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
-    <p class="disclaimer">情報の整理です。特定の投資をすすめるものではありません。</p>
+    <h2>${cfg.heading}</h2>
+    ${(ep.topics || []).map((t) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${cfg.use}：${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
+    ${cfg.note ? `<p class="disclaimer">${cfg.note}</p>` : ""}
     ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}`;
-  bindCommon(ep, "下田さん専用 週末マネー");
-  document.querySelectorAll(".past").forEach((b) => b.onclick = () => { state.moneyCurrent = state.money.find((e) => e.date === b.dataset.date); render(); scrollTo(0, 0); });
+  bindCommon(ep, `下田さん専用 ${cfg.label}`);
+  document.querySelectorAll(".past").forEach((b) => b.onclick = () => { state.seriesPick[name] = b.dataset.date; render(); scrollTo(0, 0); });
 }
 
 function render() {
-  if (state.tab === "money") return renderMoney();
+  if (SERIES[state.tab]) return renderSeries(state.tab);
   const ep = state.current;
   if (!ep) { $("#root").innerHTML = `<header><h1>AIニュース</h1><button id="reload" style="flex:0 0 auto">更新</button></header>${tabs()}${missingBanner()}<p class="empty">まだ動画がありません。明日の朝をお楽しみに。</p>${runsLog()}`; return bindCommon({}, ""); }
   const props = state.proposals.filter((p) => p.episode_date === ep.date);
@@ -224,11 +232,7 @@ async function load() {
     const keep = state.current?.date;
     state.episodes = r.episodes; state.proposals = r.proposals; state.runs = r.runs || []; state.votes = r.votes || [];
     state.current = r.episodes.find((e) => e.date === keep) || r.episodes[0] || null;
-    const keepM = state.moneyCurrent?.date;
-    state.money = r.money || [];
-    state.moneyCurrent = state.money.find((e) => e.date === keepM) || state.money[0] || null;
-    // 開いた時: 普段は毎朝ニュース。その日に週末マネーの新しい回が出ていればそちら
-    if (!state.tab) state.tab = state.money[0]?.date === ymd(new Date()) ? "money" : "daily";
+    state.series = r.series || {};
     render();
   } catch (e) { if (e.message !== "unauthorized") $("#root").innerHTML = `<p class="err">読み込めませんでした。電波を確認して開き直してください。</p>`; }
 }
