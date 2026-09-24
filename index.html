@@ -26,6 +26,16 @@ h2{font-size:16px;margin:24px 0 10px;color:var(--accent)}
 .listen{width:100%;margin-top:10px;background:var(--card);border:1px solid #334155}
 audio{width:100%;margin-top:10px}
 .kind{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-bottom:4px;color:#0f172a}
+.topic{position:relative}
+.vote{float:right;display:flex;gap:4px;margin:0 0 4px 8px}
+.vote button{flex:0 0 auto;padding:4px 8px;font-size:16px;background:#0b1222;opacity:.55}
+.vote button.on{opacity:1;background:#334155;outline:2px solid var(--accent)}
+.hint{font-size:11px;color:var(--sub);font-weight:400}
+.banner{background:#1e293b;border-left:4px solid var(--warn);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px}
+.banner.bad{border-left-color:#ef4444}
+.runs{margin-top:24px;color:var(--sub);font-size:13px}
+.runs summary{cursor:pointer;padding:8px 0}
+.run{padding:6px 0;border-top:1px solid #1e293b}
 .k-ai{background:#38bdf8}.k-realestate{background:#fbbf24}.k-tools{background:#4ade80}
 .prop{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid #334155}
 .prop h3{margin:0 0 6px;font-size:16px}
@@ -64,7 +74,7 @@ function getKey() {
   try { return localStorage.getItem("aiNewsKey"); } catch { return null; }
 }
 let KEY = getKey();
-let state = { episodes: [], proposals: [], current: null };
+let state = { episodes: [], proposals: [], runs: [], votes: [], current: null };
 
 async function api(action, body = {}) {
   const r = await fetch(API, { method: "POST", headers: { "content-type": "application/json", "x-key": KEY }, body: JSON.stringify({ action, ...body }) });
@@ -90,12 +100,35 @@ function propCard(p) {
     ${p.result_note ? `<div class="note">${esc(p.result_note)}</div>` : ""}
     ${actionable ? `<div class="btns"><button class="go" data-s="approved">いいね、やって</button><button data-s="later">あとで</button><button data-s="rejected">いらない</button></div>` : ""}
     ${p.status === "approved" ? `<div class="btns"><button data-s="proposed">取り消す</button></div>` : ""}
+    ${p.status === "failed" ? `<div class="btns"><button class="go" data-s="approved">作り直す</button><button data-s="rejected">やめておく</button></div>` : ""}
   </div>`;
 }
 
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const hm = (iso) => { const d = new Date(iso); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; };
+
+// 今日の分が届いていない時の知らせ(朝7時以降)
+function missingBanner() {
+  const now = new Date(), today = ymd(now);
+  if (now.getHours() < 7 || state.episodes.some((e) => e.date === today)) return "";
+  const failToday = state.runs.find((r) => r.kind === "daily" && r.status === "fail" && ymd(new Date(r.created_at)) === today);
+  return failToday
+    ? `<div class="banner bad">⚠ 今日の分は作れませんでした（${esc(hm(failToday.created_at))}）<br><small>${esc(failToday.note || "")}</small><br><small>Claudeに「AIニュースが失敗した」と言えば直します</small></div>`
+    : `<div class="banner">今日の分はまだ届いていません。会社のPCが起動していない可能性があります（起動すると数分で作られます）</div>`;
+}
+
+function runsLog() {
+  if (!state.runs.length) return "";
+  const KL = { daily: "毎朝の動画", build: "提案の作成" }, SL = { ok: "✅", fail: "❌", skip: "–" };
+  return `<details class="runs"><summary>動作記録（直近${Math.min(state.runs.length, 14)}件）</summary>${state.runs.slice(0, 14).map((r) =>
+    `<div class="run">${SL[r.status] || r.status} ${esc(hm(r.created_at))} ${KL[r.kind] || r.kind}${r.seconds ? `・${Math.round(r.seconds / 60)}分` : ""}<br><small>${esc(r.note || "")}</small></div>`).join("")}</details>`;
+}
+
+function voteOf(date, no) { return state.votes.find((v) => v.episode_date === date && v.topic_no === no)?.vote || 0; }
+
 function render() {
   const ep = state.current;
-  if (!ep) { $("#root").innerHTML = `<header><h1>AIニュース</h1></header><p class="empty">まだ動画がありません。明日の朝をお楽しみに。</p>`; return; }
+  if (!ep) { $("#root").innerHTML = `<header><h1>AIニュース</h1></header>${missingBanner()}<p class="empty">まだ動画がありません。明日の朝をお楽しみに。</p>${runsLog()}`; return; }
   const props = state.proposals.filter((p) => p.episode_date === ep.date);
   const inflight = state.proposals.filter((p) => p.episode_date !== ep.date && ["approved", "building", "built", "failed", "later"].includes(p.status));
   const past = state.episodes.filter((e) => e.date !== ep.date);
@@ -103,14 +136,27 @@ function render() {
   $("#root").innerHTML = `
     <header><div><h1>${esc(ep.title)}</h1><div class="date">${d.getMonth() + 1}月${d.getDate()}日・約${Math.round((ep.duration_sec || 0) / 60)}分</div></div>
       <button id="reload" style="flex:0 0 auto">更新</button></header>
+    ${missingBanner()}
     ${ep.video_url ? `<video controls playsinline preload="metadata" poster="${esc(ep.thumb_url || "")}" src="${esc(ep.video_url)}"></video>` : `<p class="empty">この日の動画は保存期間(30日)を過ぎました</p>`}
     ${ep.audio_url ? `<button id="listen" class="listen">🎧 音声だけで聴く（画面を消しても流れます）</button><audio id="aud" controls preload="none" src="${esc(ep.audio_url)}" hidden></audio>` : ""}
     <h2>今日の提案</h2>
     ${props.length ? props.map(propCard).join("") : `<p class="empty">提案はありません</p>`}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
-    <h2>ニュースの中身</h2>
-    ${(ep.topics || []).map((t) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${t.source ? `<div class="src">出典：${t.url && /^https?:\/\//.test(t.url) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.source)}</a>` : esc(t.source)}</div>` : ""}</div>`).join("")}
-    ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}`;
+    <h2>ニュースの中身 <small class="hint">👍👎で好みを覚えます</small></h2>
+    ${(ep.topics || []).map((t, i) => `<div class="topic"><div class="vote" data-no="${i + 1}"><button data-v="1" class="${voteOf(ep.date, i + 1) === 1 ? "on" : ""}">👍</button><button data-v="-1" class="${voteOf(ep.date, i + 1) === -1 ? "on" : ""}">👎</button></div>${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${t.source ? `<div class="src">出典：${t.url && /^https?:\/\//.test(t.url) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.source)}</a>` : esc(t.source)}</div>` : ""}</div>`).join("")}
+    ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}
+    ${runsLog()}`;
+  document.querySelectorAll(".vote button").forEach((b) => b.onclick = async () => {
+    const no = +b.parentElement.dataset.no, v = +b.dataset.v;
+    const next = voteOf(ep.date, no) === v ? 0 : v;  // 同じボタンをもう一度押すと取り消し
+    b.disabled = true;
+    try {
+      await api("vote", { episode_date: ep.date, topic_no: no, vote: next });
+      state.votes = state.votes.filter((x) => !(x.episode_date === ep.date && x.topic_no === no));
+      state.votes.push({ episode_date: ep.date, topic_no: no, vote: next });
+      render();
+    } catch { b.disabled = false; }
+  });
   $("#reload").onclick = load;
   if ($("#listen")) $("#listen").onclick = () => {
     const a = $("#aud"), v = $("video");
@@ -132,7 +178,7 @@ async function load() {
   try {
     const r = await api("list");
     const keep = state.current?.date;
-    state.episodes = r.episodes; state.proposals = r.proposals;
+    state.episodes = r.episodes; state.proposals = r.proposals; state.runs = r.runs || []; state.votes = r.votes || [];
     state.current = r.episodes.find((e) => e.date === keep) || r.episodes[0] || null;
     render();
   } catch (e) { if (e.message !== "unauthorized") $("#root").innerHTML = `<p class="err">読み込めませんでした。電波を確認して開き直してください。</p>`; }
