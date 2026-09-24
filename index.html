@@ -22,6 +22,11 @@ h2{font-size:16px;margin:24px 0 10px;color:var(--accent)}
 .topic b{display:block;font-size:15px}
 .topic .use{margin-top:6px;font-size:14px;color:#cbd5e1}
 .src{font-size:12px;color:var(--sub);margin-top:4px}
+.src a{color:var(--sub)}
+.listen{width:100%;margin-top:10px;background:var(--card);border:1px solid #334155}
+audio{width:100%;margin-top:10px}
+.kind{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-bottom:4px;color:#0f172a}
+.k-ai{background:#38bdf8}.k-realestate{background:#fbbf24}.k-tools{background:#4ade80}
 .prop{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid #334155}
 .prop h3{margin:0 0 6px;font-size:16px}
 .prop p{margin:6px 0;font-size:14px}
@@ -49,6 +54,7 @@ button.go{background:var(--accent);color:#0f172a;font-weight:700;flex:2}
 <script>
 const API = "https://aevqdsozxiklyjfavvhf.supabase.co/functions/v1/api";
 const LABEL = {approved:"承認済み・作成待ち",building:"作成中…",built:"できました・確認待ち",failed:"作成でつまずきました",rejected:"見送り",later:"あとで",deployed:"反映済み"};
+const KIND = { ai: "AI", realestate: "不動産", tools: "使っている道具" };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -98,13 +104,20 @@ function render() {
     <header><div><h1>${esc(ep.title)}</h1><div class="date">${d.getMonth() + 1}月${d.getDate()}日・約${Math.round((ep.duration_sec || 0) / 60)}分</div></div>
       <button id="reload" style="flex:0 0 auto">更新</button></header>
     ${ep.video_url ? `<video controls playsinline preload="metadata" poster="${esc(ep.thumb_url || "")}" src="${esc(ep.video_url)}"></video>` : `<p class="empty">この日の動画は保存期間(30日)を過ぎました</p>`}
+    ${ep.audio_url ? `<button id="listen" class="listen">🎧 音声だけで聴く（画面を消しても流れます）</button><audio id="aud" controls preload="none" src="${esc(ep.audio_url)}" hidden></audio>` : ""}
     <h2>今日の提案</h2>
     ${props.length ? props.map(propCard).join("") : `<p class="empty">提案はありません</p>`}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
     <h2>ニュースの中身</h2>
-    ${(ep.topics || []).map((t) => `<div class="topic"><b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${t.source ? `<div class="src">出典：${esc(t.source)}</div>` : ""}</div>`).join("")}
+    ${(ep.topics || []).map((t) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${t.source ? `<div class="src">出典：${t.url && /^https?:\/\//.test(t.url) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.source)}</a>` : esc(t.source)}</div>` : ""}</div>`).join("")}
     ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}`;
   $("#reload").onclick = load;
+  if ($("#listen")) $("#listen").onclick = () => {
+    const a = $("#aud"), v = $("video");
+    if (v) v.pause();
+    a.hidden = false; $("#listen").hidden = true; a.play().catch(() => {});
+    if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: ep.title, artist: "下田さん専用 AIニュース" });
+  };
   document.querySelectorAll(".past").forEach((b) => b.onclick = () => { state.current = state.episodes.find((e) => e.date === b.dataset.date); render(); scrollTo(0, 0); });
   document.querySelectorAll(".prop button[data-s]").forEach((b) => b.onclick = async () => {
     const id = b.closest(".prop").dataset.id, s = b.dataset.s;
