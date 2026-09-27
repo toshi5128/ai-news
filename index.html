@@ -57,6 +57,8 @@ button.go{background:var(--accent);color:#0f172a;font-weight:700;flex:2}
 .b-failed{background:#ef4444}
 .b-rejected,.b-later{background:var(--ng)}
 .b-deployed{background:var(--accent);color:#0f172a}
+.b-deploy_requested,.b-deploying{background:#a78bfa;color:#1e1b4b}
+.hint2{font-size:12px;color:#c4b5fd;margin-top:8px;line-height:1.5}
 .note{white-space:pre-wrap;background:#0b1222;border-radius:8px;padding:8px 10px;font-size:13px;margin-top:8px}
 .past{display:flex;gap:10px;align-items:center;background:var(--card);border-radius:12px;padding:8px;margin-bottom:8px;width:100%;text-align:left}
 .past img{width:96px;border-radius:6px;aspect-ratio:16/9;object-fit:cover;background:#000}
@@ -69,7 +71,12 @@ button.go{background:var(--accent);color:#0f172a;font-weight:700;flex:2}
 <div id="root"></div>
 <script>
 const API = "https://aevqdsozxiklyjfavvhf.supabase.co/functions/v1/api";
-const LABEL = {approved:"承認済み・作成待ち",building:"作成中…",built:"できました・確認待ち",failed:"作成でつまずきました",rejected:"見送り",later:"あとで",deployed:"反映済み"};
+// 「反映リスト」に入れられる(＝ネットで公開しているアプリ)。PCの道具は会話で個別に反映する
+const HIKARI_T = ["hikari-app-src", "hikari-app", "現場アプリ", "地上げ地図"];
+const DEPLOY_T = [...HIKARI_T, "keiryo-app", "KEIRYO", "計量", "gym-app", "ATLAS"];
+const canDeploy = (p) => DEPLOY_T.includes(String(p.target || "").trim());
+const isHikari = (p) => HIKARI_T.includes(String(p.target || "").trim());
+const LABEL = {approved:"承認済み・作成待ち",building:"作成中…",built:"できました・確認待ち",failed:"作成でつまずきました",rejected:"見送り",later:"あとで",deployed:"反映済み",deploy_requested:"反映リスト入り",deploying:"反映中…"};
 const KIND = { ai: "AI", realestate: "不動産", tools: "使っている道具", rates: "金利", stocks: "株", fx: "為替", market: "不動産市場", nisa: "NISA・制度", phone: "スマホ", app: "AIアプリ", life: "暮らし" };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -108,6 +115,9 @@ function propCard(p) {
     ${actionable ? `<div class="btns"><button class="go" data-s="approved">いいね、やって</button><button data-s="later">あとで</button><button data-s="rejected">いらない</button></div>` : ""}
     ${p.status === "approved" ? `<div class="btns"><button data-s="proposed">取り消す</button></div>` : ""}
     ${p.status === "failed" ? `<div class="btns"><button class="go" data-s="approved">作り直す</button><button data-s="rejected">やめておく</button></div>` : ""}
+    ${p.status === "built" && canDeploy(p) ? `<div class="btns"><button class="go" data-s="deploy_requested">反映リストに入れる</button><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
+    ${p.status === "built" && !canDeploy(p) ? `<div class="hint2">PCの道具なので、使う時に Claude に「${esc(p.title)}を反映して」と言ってください</div><div class="btns"><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
+    ${p.status === "deploy_requested" ? `<div class="hint2">Claude に「反映して」と一言送ると、中身を確認してから反映します${isHikari(p) ? "（ひかりアプリは現場が動いていない時間に）" : ""}</div><div class="btns"><button data-s="built">リストから外す</button></div>` : ""}
   </div>`;
 }
 
@@ -241,7 +251,7 @@ function bindProps() {
     catch (e) { b.disabled = false; alert("送れませんでした。電波を確認してもう一度押してください"); }
   });
 }
-const INFLIGHT = ["approved", "building", "built", "failed", "later"];
+const INFLIGHT = ["approved", "building", "built", "failed", "later", "deploy_requested", "deploying"];
 
 async function load() {
   if (!KEY) return renderLock();
