@@ -115,7 +115,7 @@ function propCard(p) {
     ${actionable ? `<div class="btns"><button class="go" data-s="approved">いいね、やって</button><button data-s="later">あとで</button><button data-s="rejected">いらない</button></div>` : ""}
     ${p.status === "approved" ? `<div class="btns"><button data-s="proposed">取り消す</button></div>` : ""}
     ${p.status === "failed" ? `<div class="btns"><button class="go" data-s="approved">作り直す</button><button data-s="rejected">やめておく</button></div>` : ""}
-    ${p.status === "built" && canDeploy(p) ? `<div class="btns"><button class="go" data-s="deploy_requested">反映リストに入れる</button><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
+    ${p.status === "built" && canDeploy(p) ? `<div class="hint2">Claude に「反映して」と言えば、すぐ本番に出します</div><div class="btns"><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
     ${p.status === "built" && !canDeploy(p) ? `<div class="hint2">PCの道具なので、使う時に Claude に「${esc(p.title)}を反映して」と言ってください</div><div class="btns"><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
     ${p.status === "deploy_requested" ? `<div class="hint2">Claude に「反映して」と一言送ると、中身を確認してから反映します${isHikari(p) ? "（ひかりアプリは現場が動いていない時間に）" : ""}</div><div class="btns"><button data-s="built">リストから外す</button></div>` : ""}
   </div>`;
