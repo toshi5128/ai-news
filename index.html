@@ -27,9 +27,8 @@ h2{font-size:16px;margin:24px 0 10px;color:var(--accent)}
 audio{width:100%;margin-top:10px}
 .kind{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-bottom:4px;color:#0f172a}
 .topic{position:relative}
-.vote{float:right;display:flex;gap:4px;margin:0 0 4px 8px}
-.vote button{flex:0 0 auto;padding:4px 8px;font-size:16px;background:#0b1222;opacity:.55}
-.vote button.on{opacity:1;background:#334155;outline:2px solid var(--accent)}
+.more-props{margin:-2px 0 12px}
+.more-props summary{cursor:pointer;color:var(--sub);font-size:13px;padding:6px 2px}
 .hint{font-size:11px;color:var(--sub);font-weight:400}
 .basis{font-size:12px;color:#fde68a;background:#1f2937;border-radius:8px;padding:6px 8px;margin-top:6px}
 .banner{background:#1e293b;border-left:4px solid var(--warn);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:14px}
@@ -141,7 +140,14 @@ function runsLog() {
     `<div class="run">${SL[r.status] || r.status} ${esc(hm(r.created_at))} ${KL[r.kind] || r.kind}${r.seconds ? `・${Math.round(r.seconds / 60)}分` : ""}<br><small>${esc(r.note || "")}</small></div>`).join("")}</details>`;
 }
 
-function voteOf(date, no) { return state.votes.find((v) => v.episode_date === date && v.topic_no === no)?.vote || 0; }
+// その日の提案は「イチオシ1枚」だけ大きく、残りは畳む（8日で41枚出て押されたのは数枚だったため 2026-10-03）
+// 並びは作る時に価値の高い順（rank 1=イチオシ）。rank の無い古い提案は届いた順のまま
+function pickBlock(props, title) {
+  if (!props.length) return `<h2>${title}</h2><p class="empty">提案はありません</p>`;
+  const sorted = props.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99));
+  const [top, ...rest] = sorted;
+  return `<h2>${title}</h2>${propCard(top)}${rest.length ? `<details class="more-props"><summary>ほかの案（${rest.length}件）</summary>${rest.map(propCard).join("")}</details>` : ""}`;
+}
 
 // タブ: 仕事(不動産×AI) / お金・NISA / 暮らしのAI。どれも毎朝届く
 function tabs() {
@@ -190,7 +196,7 @@ function renderSeries(name) {
       <button id="reload" style="flex:0 0 auto">更新</button></header>
     ${tabs()}
     ${player(ep)}
-    ${props.length ? `<h2>私が作れる提案</h2>${props.map(propCard).join("")}` : ""}
+    ${props.length ? pickBlock(props, "今日のイチオシ提案") : ""}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
     <h2>${cfg.heading}</h2>
     ${(ep.topics || []).map((t) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${cfg.use}：${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
@@ -219,25 +225,13 @@ function render() {
     ${tabs()}
     ${missingBanner()}
     ${player(ep)}
-    <h2>今日の提案</h2>
-    ${props.length ? props.map(propCard).join("") : `<p class="empty">提案はありません</p>`}
+    ${pickBlock(props, "今日のイチオシ提案")}
     ${comboNew.length ? `<h2>🔗 掛け合わせ提案 <small class="hint">週1回・貯まった材料から</small></h2>${comboNew.map(propCard).join("")}` : ""}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
-    <h2>ニュースの中身 <small class="hint">👍👎で好みを覚えます</small></h2>
-    ${(ep.topics || []).map((t, i) => `<div class="topic"><div class="vote" data-no="${i + 1}"><button data-v="1" class="${voteOf(ep.date, i + 1) === 1 ? "on" : ""}">👍</button><button data-v="-1" class="${voteOf(ep.date, i + 1) === -1 ? "on" : ""}">👎</button></div>${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
+    <h2>ニュースの中身</h2>
+    ${(ep.topics || []).map((t, i) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
     ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}
     ${runsLog()}`;
-  document.querySelectorAll(".vote button").forEach((b) => b.onclick = async () => {
-    const no = +b.parentElement.dataset.no, v = +b.dataset.v;
-    const next = voteOf(ep.date, no) === v ? 0 : v;  // 同じボタンをもう一度押すと取り消し
-    b.disabled = true;
-    try {
-      await api("vote", { episode_date: ep.date, topic_no: no, vote: next });
-      state.votes = state.votes.filter((x) => !(x.episode_date === ep.date && x.topic_no === no));
-      state.votes.push({ episode_date: ep.date, topic_no: no, vote: next });
-      render();
-    } catch { b.disabled = false; }
-  });
   bindCommon(ep, "下田さん専用 AIニュース");
   document.querySelectorAll(".past").forEach((b) => b.onclick = () => { state.current = state.episodes.find((e) => e.date === b.dataset.date); render(); scrollTo(0, 0); });
   bindProps();
