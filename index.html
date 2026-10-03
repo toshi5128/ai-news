@@ -149,7 +149,7 @@ function tabs() {
   return `<nav class="tabs">${T.map(([k, l]) => `<button data-tab="${k}" class="${state.tab === k ? "on" : ""}">${l}</button>`).join("")}</nav>`;
 }
 const srcLink = (t) => t.source ? `<div class="src">出典：${t.url && /^https?:\/\//.test(t.url) ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">${esc(t.source)}</a>` : esc(t.source)}</div>` : "";
-const player = (ep) => `${ep.video_url ? `<video controls playsinline preload="metadata" poster="${esc(ep.thumb_url || "")}" src="${esc(ep.video_url)}"></video>` : `<p class="empty">この回の動画は保存期間(30日)を過ぎました</p>`}
+const player = (ep) => `${ep.video_url ? `<video controls playsinline preload="metadata" poster="${esc(ep.thumb_url || "")}" src="${esc(ep.video_url)}"></video>` : `<p class="empty">この回の動画は保存期間(3週間)を過ぎました</p>`}
     ${ep.audio_url ? `<button id="listen" class="listen">🎧 音声だけで聴く（画面を消しても流れます）</button><audio id="aud" controls preload="none" src="${esc(ep.audio_url)}" hidden></audio>` : ""}`;
 
 function bindCommon(ep, artist) {
