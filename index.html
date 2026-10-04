@@ -148,17 +148,20 @@ function waitText(p) {
 
 // 「中身を見る」: 作った物の確認ページを全画面で開く。中のページは別枠(スクリプト無効)で表示
 async function openPreview(p) {
+  return openPage(p.title, p.preview_url, p.status === "built" ? p : null);
+}
+async function openPage(title, url, p) {
   const box = document.createElement("div");
   box.className = "pv";
-  box.innerHTML = `<div class="pv-bar"><b>${esc(p.title)}</b><button id="pvClose">閉じる</button></div><iframe sandbox="" title="中身"></iframe>
-    ${p.status === "built" ? `<div class="pv-acts" data-id="${p.id}">${shipBtns(p).replace('<div class="hint2">', '<div class="hint2" hidden>')}</div>` : ""}`;
+  box.innerHTML = `<div class="pv-bar"><b>${esc(title)}</b><button id="pvClose">閉じる</button></div><iframe sandbox="" title="中身"></iframe>
+    ${p ? `<div class="pv-acts" data-id="${p.id}">${shipBtns(p).replace('<div class="hint2">', '<div class="hint2" hidden>')}</div>` : ""}`;
   document.body.appendChild(box);
   document.body.style.overflow = "hidden";
   const close = () => { box.remove(); document.body.style.overflow = ""; };
   box.querySelector("#pvClose").onclick = close;
-  bindShip(box, p, close);
+  if (p) bindShip(box, p, close);
   try {
-    const r = await fetch(p.preview_url);
+    const r = await fetch(url);
     if (!r.ok) throw new Error(r.status);
     box.querySelector("iframe").srcdoc = await r.text();
   } catch (e) {
@@ -181,6 +184,21 @@ function bindShip(root, p, after) {
       if (after) after();
       render();
     } catch (e) { b.disabled = false; alert("送れませんでした。電波を確認してもう一度押してください"); }
+  });
+}
+
+// 🧰 道具から届いたもの（PCが時間を見て勝手に作る: 訪問予習=毎晩 / 訪問下書き=PLAUDに訪問の話が入った時 / 週次まとめ=日曜夜）
+const TOOL_TABS = { daily: ["yoshu", "visits"], money: ["weekly"] };
+function toolsBlock(tab) {
+  const list = (state.tools || []).filter((t) => (TOOL_TABS[tab] || []).includes(t.key) && t.url);
+  if (!list.length) return "";
+  return `<h2>🧰 道具から届いたもの</h2>${list.map((t) => `<div class="topic"><b>${esc(t.title)}</b><div class="src">${esc(hm(t.updated_at))} に届きました</div>
+    ${t.kind === "audio" ? `<audio controls preload="none" src="${esc(t.url)}"></audio>` : `<div class="btns"><button class="see" data-tool="${esc(t.key)}">📄 開く</button></div>`}</div>`).join("")}`;
+}
+function bindTools() {
+  document.querySelectorAll("button[data-tool]").forEach((b) => b.onclick = () => {
+    const t = state.tools.find((x) => x.key === b.dataset.tool);
+    if (t) openPage(t.title, t.url, null);
   });
 }
 
@@ -280,6 +298,7 @@ function renderSeries(name) {
       <button id="reload" style="flex:0 0 auto">更新</button></header>
     ${tabs()}
     ${player(ep)}
+    ${toolsBlock(name)}
     ${props.length ? pickBlock(props, "今日のイチオシ提案") : ""}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
     <h2>${cfg.heading}</h2>
@@ -309,6 +328,7 @@ function render() {
     ${tabs()}
     ${missingBanner()}
     ${player(ep)}
+    ${toolsBlock("daily")}
     ${pickBlock(props, "今日のイチオシ提案")}
     ${comboNew.length ? `<h2>🔗 掛け合わせ提案 <small class="hint">週1回・貯まった材料から</small></h2>${comboNew.map(propCard).join("")}` : ""}
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
@@ -322,6 +342,7 @@ function render() {
 }
 
 function bindProps() {
+  bindTools();
   document.querySelectorAll(".prop").forEach((el) => {
     const p = state.proposals.find((x) => x.id === el.dataset.id);
     if (!p) return;
@@ -346,6 +367,7 @@ async function load() {
     state.episodes = r.episodes; state.proposals = r.proposals; state.runs = r.runs || []; state.votes = r.votes || []; state.views = r.views || [];
     state.current = r.episodes.find((e) => e.date === keep) || r.episodes[0] || null;
     state.series = r.series || {};
+    state.tools = r.tools || [];
     render();
   } catch (e) { if (e.message !== "unauthorized") $("#root").innerHTML = `<p class="err">読み込めませんでした。電波を確認して開き直してください。</p>`; }
 }
