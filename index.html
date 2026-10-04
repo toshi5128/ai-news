@@ -142,8 +142,8 @@ function shipBtns(p) {
     : `<button class="ship" data-ship="now">反映する</button>`}</div>`;
 }
 function waitText(p) {
-  if (isHikari(p) && !p.deploy_now) return "20時以降に反映します。Claudeに「反映して」と送れば、その場で出します";
-  return "反映待ちです。Claudeに「反映して」と送ると出します";
+  if (isHikari(p) && !p.deploy_now) return "20時以降にPCが自動で反映します（終わったら通知が届きます）";
+  return "10分以内にPCが自動で反映します（PCが起動している時。終わったら通知が届きます）";
 }
 
 // 「中身を見る」: 作った物の確認ページを全画面で開く。中のページは別枠(スクリプト無効)で表示
