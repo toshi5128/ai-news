@@ -27,6 +27,7 @@ h2{font-size:16px;margin:24px 0 10px;color:var(--accent)}
 audio{width:100%;margin-top:10px}
 .kind{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;margin-bottom:4px;color:#0f172a}
 .topic{position:relative}
+.seen{margin-left:auto;font-size:11px;color:#22c55e;font-weight:700;flex:0 0 auto}
 .more-props{margin:-2px 0 12px}
 .more-props summary{cursor:pointer;color:var(--sub);font-size:13px;padding:6px 2px}
 .hint{font-size:11px;color:var(--sub);font-weight:400}
@@ -63,6 +64,17 @@ button.go{background:var(--accent);color:#0f172a;font-weight:700;flex:2}
 .past img{width:96px;border-radius:6px;aspect-ratio:16/9;object-fit:cover;background:#000}
 .empty,.err{color:var(--sub);font-size:14px;padding:20px 0;text-align:center}
 .lock{max-width:420px;margin:30vh auto 0;text-align:center}
+button.see{background:#0e7490;font-weight:700}
+button.ship{background:#a78bfa;color:#1e1b4b;font-weight:700;flex:2}
+button.armed{background:#f59e0b;color:#111}
+.pv{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.pv-bar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #334155}
+.pv-bar b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv-bar button{flex:0 0 auto;padding:8px 14px}
+.pv iframe{flex:1;width:100%;border:0;background:#fff}
+.pv-acts{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #334155}
+.pv-acts .btns{flex:1;margin-top:0}
+.report summary{cursor:pointer;color:var(--sub);font-size:13px;padding:6px 2px}
 .lock input{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:var(--card);color:var(--ink);font-size:16px;margin:12px 0}
 </style>
 </head>
@@ -70,12 +82,12 @@ button.go{background:var(--accent);color:#0f172a;font-weight:700;flex:2}
 <div id="root"></div>
 <script>
 const API = "https://aevqdsozxiklyjfavvhf.supabase.co/functions/v1/api";
-// 「反映リスト」に入れられる(＝ネットで公開しているアプリ)。PCの道具は会話で個別に反映する
+// ネットで公開しているアプリ(反映＝本番に出す)。それ以外はPCの道具(反映＝PCで使える状態にする)
 const HIKARI_T = ["hikari-app-src", "hikari-app", "現場アプリ", "地上げ地図"];
 const DEPLOY_T = [...HIKARI_T, "keiryo-app", "KEIRYO", "計量", "gym-app", "ATLAS"];
 const canDeploy = (p) => DEPLOY_T.includes(String(p.target || "").trim());
 const isHikari = (p) => HIKARI_T.includes(String(p.target || "").trim());
-const LABEL = {approved:"承認済み・作成待ち",building:"作成中…",built:"できました・確認待ち",failed:"作成でつまずきました",rejected:"見送り",later:"あとで",deployed:"反映済み",deploy_requested:"反映リスト入り",deploying:"反映中…"};
+const LABEL = {approved:"承認済み・作成待ち",building:"作成中…",built:"できました・確認待ち",failed:"作成でつまずきました",rejected:"見送り",later:"あとで",deployed:"反映済み",deploy_requested:"反映待ち",deploying:"反映中…"};
 const KIND = { ai: "AI", realestate: "不動産", tools: "使っている道具", rates: "金利", stocks: "株", fx: "為替", market: "不動産市場", nisa: "NISA・制度", phone: "スマホ", app: "AIアプリ", life: "暮らし" };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -86,7 +98,7 @@ function getKey() {
   try { return localStorage.getItem("aiNewsKey"); } catch { return null; }
 }
 let KEY = getKey();
-let state = { episodes: [], proposals: [], runs: [], votes: [], current: null, series: {}, seriesPick: {}, tab: "daily" };
+let state = { episodes: [], proposals: [], runs: [], votes: [], current: null, series: {}, seriesPick: {}, tab: "daily", views: [] };
 
 async function api(action, body = {}) {
   const r = await fetch(API, { method: "POST", headers: { "content-type": "application/json", "x-key": KEY }, body: JSON.stringify({ action, ...body }) });
@@ -110,14 +122,66 @@ function propCard(p) {
     <p class="how">${esc(p.how)}</p>
     ${p.basis ? `<div class="basis">🔗 ${esc(p.basis)}</div>` : ""}
     <div class="meta">対象：${esc(p.target || "-")}　目安：${esc(p.effort || "-")}</div>
-    ${p.result_note ? `<div class="note">${esc(p.result_note)}</div>` : ""}
+    ${p.result_note ? (p.preview_url ? `<details class="report"><summary>作った人の報告を読む</summary><div class="note">${esc(p.result_note)}</div></details>` : `<div class="note">${esc(p.result_note)}</div>`) : ""}
     ${actionable ? `<div class="btns"><button class="go" data-s="approved">いいね、やって</button><button data-s="later">あとで</button><button data-s="rejected">いらない</button></div>` : ""}
     ${p.status === "approved" ? `<div class="btns"><button data-s="proposed">取り消す</button></div>` : ""}
     ${p.status === "failed" ? `<div class="btns"><button class="go" data-s="approved">作り直す</button><button data-s="rejected">やめておく</button></div>` : ""}
-    ${p.status === "built" && canDeploy(p) ? `<div class="hint2">Claude に「反映して」と言えば、すぐ本番に出します</div><div class="btns"><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
-    ${p.status === "built" && !canDeploy(p) ? `<div class="hint2">PCの道具なので、使う時に Claude に「${esc(p.title)}を反映して」と言ってください</div><div class="btns"><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
-    ${p.status === "deploy_requested" ? `<div class="hint2">Claude に「反映して」と一言送ると、中身を確認してから反映します${isHikari(p) ? "（ひかりアプリは現場が動いていない時間に）" : ""}</div><div class="btns"><button data-s="built">リストから外す</button></div>` : ""}
+    ${p.preview_url && ["built", "deploy_requested", "deploying", "deployed"].includes(p.status) ? `<div class="btns"><button class="see" data-see="1">📄 中身を見る</button></div>` : ""}
+    ${p.status === "built" ? `${shipBtns(p)}<div class="btns"><button data-s="approved">作り直す</button><button data-s="rejected">やめる</button></div>` : ""}
+    ${p.status === "deploy_requested" ? `<div class="hint2">${waitText(p)}</div><div class="btns"><button data-s="built">反映を取り消す</button></div>` : ""}
   </div>`;
+}
+
+// 「反映する」ボタン。1回目で黄色に変わり、もう1回押すと確定(誤タップ防止)
+function shipBtns(p) {
+  const hint = !canDeploy(p) ? "PCの道具：押すとPCで使える状態にします（設定・登録など）"
+    : isHikari(p) ? "ひかりアプリ：現場の探索中に出すとデータが消える恐れがあるので、ふつうは20時以降に出します"
+    : "本番アプリに出します";
+  return `<div class="hint2">${hint}</div><div class="btns">${isHikari(p)
+    ? `<button class="ship" data-ship="night">今夜反映する</button><button data-ship="now">今すぐ</button>`
+    : `<button class="ship" data-ship="now">反映する</button>`}</div>`;
+}
+function waitText(p) {
+  if (isHikari(p) && !p.deploy_now) return "20時以降に反映します。Claudeに「反映して」と送れば、その場で出します";
+  return "反映待ちです。Claudeに「反映して」と送ると出します";
+}
+
+// 「中身を見る」: 作った物の確認ページを全画面で開く。中のページは別枠(スクリプト無効)で表示
+async function openPreview(p) {
+  const box = document.createElement("div");
+  box.className = "pv";
+  box.innerHTML = `<div class="pv-bar"><b>${esc(p.title)}</b><button id="pvClose">閉じる</button></div><iframe sandbox="" title="中身"></iframe>
+    ${p.status === "built" ? `<div class="pv-acts" data-id="${p.id}">${shipBtns(p).replace('<div class="hint2">', '<div class="hint2" hidden>')}</div>` : ""}`;
+  document.body.appendChild(box);
+  document.body.style.overflow = "hidden";
+  const close = () => { box.remove(); document.body.style.overflow = ""; };
+  box.querySelector("#pvClose").onclick = close;
+  bindShip(box, p, close);
+  try {
+    const r = await fetch(p.preview_url);
+    if (!r.ok) throw new Error(r.status);
+    box.querySelector("iframe").srcdoc = await r.text();
+  } catch (e) {
+    box.querySelector("iframe").srcdoc = `<p style="font:16px sans-serif;padding:20px">読み込めませんでした。更新を押してから開き直してください。</p>`;
+  }
+}
+
+function bindShip(root, p, after) {
+  root.querySelectorAll("button[data-ship]").forEach((b) => b.onclick = async () => {
+    if (!b.classList.contains("armed")) {
+      root.querySelectorAll("button[data-ship]").forEach((x) => { x.classList.remove("armed"); x.textContent = x.dataset.ship === "night" ? "今夜反映する" : (isHikari(p) ? "今すぐ" : "反映する"); });
+      b.classList.add("armed"); b.textContent = "もう一度押すと確定";
+      return;
+    }
+    b.disabled = true;
+    try {
+      const now = b.dataset.ship === "now";
+      await api("set_status", { id: p.id, status: "deploy_requested", deploy_now: now });
+      p.status = "deploy_requested"; p.deploy_now = now;
+      if (after) after();
+      render();
+    } catch (e) { b.disabled = false; alert("送れませんでした。電波を確認してもう一度押してください"); }
+  });
 }
 
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -135,7 +199,7 @@ function missingBanner() {
 
 function runsLog() {
   if (!state.runs.length) return "";
-  const KL = { daily: "毎朝の動画", build: "提案の作成", money: "お金・NISA", life: "暮らしのAI" }, SL = { ok: "✅", fail: "❌", skip: "–" };
+  const KL = { daily: "毎朝の動画", build: "提案の作成", deploy: "反映", money: "お金・NISA", life: "暮らしのAI" }, SL = { ok: "✅", fail: "❌", skip: "–" };
   return `<details class="runs"><summary>動作記録（直近${Math.min(state.runs.length, 14)}件）</summary>${state.runs.slice(0, 14).map((r) =>
     `<div class="run">${SL[r.status] || r.status} ${esc(hm(r.created_at))} ${KL[r.kind] || r.kind}${r.seconds ? `・${Math.round(r.seconds / 60)}分` : ""}<br><small>${esc(r.note || "")}</small></div>`).join("")}</details>`;
 }
@@ -170,7 +234,27 @@ function bindCommon(ep, artist) {
     a.hidden = false; $("#listen").hidden = true; a.play().catch(() => {});
     if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: ep.title, artist });
   };
+  // 🆕 どこまで見たかを記録（25/50/90/100%を越えた時に1回ずつ）。どのタブが役立っているかを見るため
+  if (ep.date) ["video", "#aud"].forEach((sel) => { const m = $(sel); if (m) trackPlay(m, state.tab, ep.date); });
 }
+
+const VIEW_STEPS = [25, 50, 90, 100];
+function viewOf(series, date) { return (state.views.find((v) => v.series === series && v.date === date) || {}).progress || 0; }
+function trackPlay(media, series, date) {
+  const send = (p) => {
+    if (p <= viewOf(series, date)) return;
+    state.views = state.views.filter((v) => !(v.series === series && v.date === date)).concat([{ series, date, progress: p }]);
+    api("view", { series, date, progress: p }).catch(() => {});
+  };
+  media.addEventListener("timeupdate", () => {
+    if (!media.duration) return;
+    const pct = (media.currentTime / media.duration) * 100;
+    const step = VIEW_STEPS.filter((s) => pct >= s).pop();
+    if (step) send(step);
+  });
+  media.addEventListener("ended", () => send(100));
+}
+const seenMark = (series, date) => viewOf(series, date) >= 50 ? `<span class="seen">✓見た</span>` : "";
 
 // 仕事タブ以外の見せ方。タブを増やす時はここと tabs() に足す
 const SERIES = {
@@ -201,7 +285,7 @@ function renderSeries(name) {
     <h2>${cfg.heading}</h2>
     ${(ep.topics || []).map((t) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${cfg.use}：${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
     ${cfg.note ? `<p class="disclaimer">${cfg.note}</p>` : ""}
-    ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}`;
+    ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span>${seenMark(e.series || "daily", e.date)}</button>`).join("")}` : ""}`;
   bindCommon(ep, `下田さん専用 ${cfg.label}`);
   document.querySelectorAll(".past").forEach((b) => b.onclick = () => { state.seriesPick[name] = b.dataset.date; render(); scrollTo(0, 0); });
   bindProps();
@@ -230,7 +314,7 @@ function render() {
     ${inflight.length ? `<h2>進行中・保留の提案</h2>${inflight.map(propCard).join("")}` : ""}
     <h2>ニュースの中身</h2>
     ${(ep.topics || []).map((t, i) => `<div class="topic">${KIND[t.kind] ? `<span class="kind k-${t.kind}">${KIND[t.kind]}</span>` : ""}<b>${esc(t.title)}</b>${t.use ? `<div class="use">→ ${esc(t.use)}</div>` : ""}${srcLink(t)}</div>`).join("")}
-    ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span></button>`).join("")}` : ""}
+    ${past.length ? `<h2>過去の回</h2>${past.map((e) => `<button class="past" data-date="${e.date}">${e.thumb_url ? `<img src="${esc(e.thumb_url)}" alt="">` : ""}<span>${esc(e.title)}</span>${seenMark(e.series || "daily", e.date)}</button>`).join("")}` : ""}
     ${runsLog()}`;
   bindCommon(ep, "下田さん専用 AIニュース");
   document.querySelectorAll(".past").forEach((b) => b.onclick = () => { state.current = state.episodes.find((e) => e.date === b.dataset.date); render(); scrollTo(0, 0); });
@@ -238,6 +322,13 @@ function render() {
 }
 
 function bindProps() {
+  document.querySelectorAll(".prop").forEach((el) => {
+    const p = state.proposals.find((x) => x.id === el.dataset.id);
+    if (!p) return;
+    const see = el.querySelector("button[data-see]");
+    if (see) see.onclick = () => openPreview(p);
+    bindShip(el, p);
+  });
   document.querySelectorAll(".prop button[data-s]").forEach((b) => b.onclick = async () => {
     const id = b.closest(".prop").dataset.id, s = b.dataset.s;
     b.disabled = true;
@@ -252,7 +343,7 @@ async function load() {
   try {
     const r = await api("list");
     const keep = state.current?.date;
-    state.episodes = r.episodes; state.proposals = r.proposals; state.runs = r.runs || []; state.votes = r.votes || [];
+    state.episodes = r.episodes; state.proposals = r.proposals; state.runs = r.runs || []; state.votes = r.votes || []; state.views = r.views || [];
     state.current = r.episodes.find((e) => e.date === keep) || r.episodes[0] || null;
     state.series = r.series || {};
     render();
