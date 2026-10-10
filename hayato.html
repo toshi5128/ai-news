@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#030812">
+<title>HAYATO</title>
+<style>
+:root{--bg:#030812;--cyan:#5fd6ff;--cyan2:#9be8ff;--text:#d8f2ff;--muted:#7fa3bd;--line:rgba(80,200,255,.45)}
+html,body{margin:0;height:100%;background:radial-gradient(ellipse at 50% 35%,#0b2240,#030812 65%);color:var(--text);font-family:"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif}
+.box{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;box-sizing:border-box;text-align:center;gap:14px}
+.logo{font-weight:800;letter-spacing:.4em;font-size:26px;color:var(--cyan2);text-shadow:0 0 14px var(--cyan);padding-left:.4em}
+.ring{width:90px;height:90px;border-radius:50%;border:2px solid var(--cyan);box-shadow:0 0 30px rgba(95,214,255,.5),inset 0 0 20px rgba(95,214,255,.3);animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+p{margin:0;font-size:14px;color:var(--muted);line-height:1.7}
+input{width:100%;max-width:320px;box-sizing:border-box;background:#00101f;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:12px;font-size:16px}
+button{min-height:46px;padding:0 22px;border-radius:8px;border:1px solid var(--line);background:rgba(95,214,255,.15);color:var(--cyan2);font-weight:800;font-size:15px}
+#keyBox{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="ring"></div>
+  <div class="logo">HAYATO</div>
+  <p id="msg">ハヤトを呼んでいます…</p>
+  <div id="keyBox">
+    <p>最初の1回だけ、合言葉を入れてください。<br>（PCの hayato\.secrets\key.txt）</p>
+    <input id="k" placeholder="合言葉" autocomplete="off">
+    <button id="ok">ハヤトを開く</button>
+  </div>
+</div>
+<script>
+// ハヤトの入口：PCが毎回変わるURLを ntfy に置く → ここで最新を読んで、合言葉をつけて開く。
+// 合言葉はこのスマホの中（この入口ページ）にだけ覚える。ntfy には載せない。
+const TOPIC = "hayato-url-3218359548";
+const $ = s => document.querySelector(s);
+const get = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
+const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+async function go() {
+  const key = get("hayato_key");
+  if (!key) { $("#msg").textContent = "合言葉がまだありません"; $("#keyBox").style.display = "flex"; return; }
+  try {
+    const t = await (await fetch(`https://ntfy.sh/${TOPIC}/json?poll=1&since=24h`)).text();
+    const urls = t.trim().split("\n").map(l => { try { return JSON.parse(l).message; } catch { return ""; } })
+      .filter(u => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(u || ""));
+    const url = urls[urls.length - 1];
+    if (!url) { $("#msg").innerHTML = "ハヤトが見つかりません。<br>PCの電源が入っていて、ハヤトが起動しているか確認してください。"; return; }
+    $("#msg").textContent = "つながりました";
+    location.replace(url + "/#k=" + encodeURIComponent(key));
+  } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
+}
+$("#ok").onclick = () => { const v = $("#k").value.trim(); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ハヤトを呼んでいます…"; go(); };
+const hk = location.hash.match(/k=([^&]+)/);
+if (hk) { set("hayato_key", decodeURIComponent(hk[1])); history.replaceState(null, "", location.pathname); }
+go();
+</script>
+</body>
+</html>
