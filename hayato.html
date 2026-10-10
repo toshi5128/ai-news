@@ -35,10 +35,11 @@ button{min-height:46px;padding:0 22px;border-radius:8px;border:1px solid var(--l
 const TOPIC = "hayato-url-3218359548";
 const $ = s => document.querySelector(s);
 const MORNING = /morning/.test(location.hash);  // 朝の報告の通知から来た時は、ハヤトで報告カードを開く
+const normKey = k => String(k || "").normalize("NFKC").replace(/\s+/g, "");  // 全角で入れても半角に
 const get = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 async function go() {
-  const key = get("hayato_key");
+  const key = normKey(get("hayato_key"));
   if (!key) { $("#msg").textContent = "合言葉がまだありません"; $("#keyBox").style.display = "flex"; return; }
   try {
     const t = await (await fetch(`https://ntfy.sh/${TOPIC}/json?poll=1&since=24h`)).text();
@@ -50,9 +51,9 @@ async function go() {
     location.replace(url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : ""));
   } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
 }
-$("#ok").onclick = () => { const v = $("#k").value.trim(); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ハヤトを呼んでいます…"; go(); };
+$("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ハヤトを呼んでいます…"; go(); };
 const hk = location.hash.match(/k=([^&]+)/);
-if (hk) { set("hayato_key", decodeURIComponent(hk[1])); history.replaceState(null, "", location.pathname); }
+if (hk) { set("hayato_key", normKey(decodeURIComponent(hk[1]))); history.replaceState(null, "", location.pathname); }
 go();
 </script>
 </body>
