@@ -34,6 +34,7 @@ button{min-height:46px;padding:0 22px;border-radius:8px;border:1px solid var(--l
 // 合言葉はこのスマホの中（この入口ページ）にだけ覚える。ntfy には載せない。
 const TOPIC = "hayato-url-3218359548";
 const $ = s => document.querySelector(s);
+const MORNING = /morning/.test(location.hash);  // 朝の報告の通知から来た時は、ハヤトで報告カードを開く
 const get = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 async function go() {
@@ -46,7 +47,7 @@ async function go() {
     const url = urls[urls.length - 1];
     if (!url) { $("#msg").innerHTML = "ハヤトが見つかりません。<br>PCの電源が入っていて、ハヤトが起動しているか確認してください。"; return; }
     $("#msg").textContent = "つながりました";
-    location.replace(url + "/#k=" + encodeURIComponent(key));
+    location.replace(url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : ""));
   } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
 }
 $("#ok").onclick = () => { const v = $("#k").value.trim(); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ハヤトを呼んでいます…"; go(); };
