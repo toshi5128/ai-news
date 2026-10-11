@@ -34,10 +34,30 @@ button{min-height:46px;padding:0 22px;border-radius:8px;border:1px solid var(--l
 // 合言葉はこのスマホの中（この入口ページ）にだけ覚える。ntfy には載せない。
 const TOPIC = "hayato-url-3218359548";
 const $ = s => document.querySelector(s);
-const MORNING = /morning/.test(location.hash);  // 朝の報告の通知から来た時は、ハヤトで報告カードを開く
+const MORNING = /morning/.test(location.hash);
+const NUDGE = /nudge/.test(location.hash);  // 「ハヤトから一言」の通知から来た時は、その一言を開く  // 朝の報告の通知から来た時は、ハヤトで報告カードを開く
 const normKey = k => String(k || "").normalize("NFKC").replace(/\s+/g, "");  // 全角で入れても半角に
 const get = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+// 筋トレ(ATLAS)・計量(KEIRYO)・賃管特訓は、この入口と同じ場所(toshi5128.github.io)にあるので記録が読める。
+// 開くたびに、変わっていればハヤト（PC）へ渡す → ハヤトが体・食事・勉強にも意見を言える。PCの中にだけ置く
+const LIFE_KEYS = ["gym_logs_v2", "gym_exercises_v2", "gym_bw_v1", "gym_meas_v1", "gym_dayinfo_v1", "gym_meals_v1", "gym_drinks_v1",
+  "gym_supps_v1", "gym_program_v1", "gym_settings_v1", "keiryo.v1", "chinkan.v1"];
+async function sendLife(url, key) {
+  const body = {};
+  for (const k of LIFE_KEYS) { const v = get(k); if (v) body[k] = v; }
+  const names = Object.keys(body);
+  if (!names.length) return;
+  const json = JSON.stringify(body);
+  const sig = json.length + ":" + json.slice(-200);
+  if (get("hayato_life_sig") === sig) return;  // 前回から変わっていなければ送らない
+  $("#msg").textContent = "記録を渡しています…";
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 8000);
+  try {
+    const r = await fetch(url + "/api/life", { method: "POST", headers: { "X-Key": key, "Content-Type": "application/json" }, body: json, signal: ac.signal });
+    if (r.ok) set("hayato_life_sig", sig);
+  } catch {} finally { clearTimeout(t); }
+}
 async function go() {
   const key = normKey(get("hayato_key"));
   if (!key) { $("#msg").textContent = "合言葉がまだありません"; $("#keyBox").style.display = "flex"; return; }
@@ -47,8 +67,9 @@ async function go() {
       .filter(u => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(u || ""));
     const url = urls[urls.length - 1];
     if (!url) { $("#msg").innerHTML = "ハヤトが見つかりません。<br>PCの電源が入っていて、ハヤトが起動しているか確認してください。"; return; }
+    await sendLife(url, key);
     $("#msg").textContent = "つながりました";
-    location.replace(url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : ""));
+    location.replace(url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : "") + (NUDGE ? "&nudge=1" : ""));
   } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
 }
 $("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ハヤトを呼んでいます…"; go(); };
