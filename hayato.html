@@ -47,6 +47,8 @@ async function sendLife(url, key) {
   const body = {};
   for (const k of LIFE_KEYS) { const v = get(k); if (v) body[k] = v; }
   const names = Object.keys(body);
+  // 届かない時の手がかり：どのアプリの記録が見えたかだけ PC に知らせる（中身は送らない）
+  try { fetch(url + "/api/clientlog", { method: "POST", body: `入口 見えた記録 ${names.join(",") || "なし"} ${navigator.userAgent.slice(0, 60)}` }); } catch {}
   if (!names.length) return;
   const json = JSON.stringify(body);
   const sig = json.length + ":" + json.slice(-200);
