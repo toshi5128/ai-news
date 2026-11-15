@@ -1,1 +1,13 @@
-{"name":"ハヤト","short_name":"ハヤト","start_url":"./hayato.html","scope":"./hayato","display":"standalone","background_color":"#030812","theme_color":"#030812","icons":[{"src":"hayato-192.png","sizes":"192x192","type":"image/png"},{"src":"hayato-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
+{
+  "name": "勇次郎",
+  "short_name": "勇次郎",
+  "start_url": "./hayato.html",
+  "scope": "./hayato.html",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#090909",
+  "icons": [
+    {"src":"yujiro-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"yujiro-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+  ]
+}

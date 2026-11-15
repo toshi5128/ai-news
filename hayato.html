@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#030812">
-<link rel="manifest" href="hayato-manifest.json">
-<link rel="apple-touch-icon" href="hayato-192.png">
-<title>HAYATO</title>
+<meta name="theme-color" content="#090909">
+<meta name="apple-mobile-web-app-title" content="勇次郎">
+<link rel="manifest" href="hayato-manifest.json?v=yujiro">
+<link rel="apple-touch-icon" href="yujiro-icon-180.png" sizes="180x180">
+<link rel="icon" href="yujiro-icon-192.png" type="image/png">
+<title>勇次郎</title>
 <style>
 :root{--bg:#030812;--cyan:#5fd6ff;--cyan2:#9be8ff;--text:#d8f2ff;--muted:#7fa3bd;--line:rgba(80,200,255,.45)}
 html,body{margin:0;height:100%;background:radial-gradient(ellipse at 50% 35%,#0b2240,#030812 65%);color:var(--text);font-family:"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif}
@@ -18,17 +20,24 @@ p{margin:0;font-size:14px;color:var(--muted);line-height:1.7}
 input{width:100%;max-width:320px;box-sizing:border-box;background:#00101f;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:12px;font-size:16px}
 button{min-height:46px;padding:0 22px;border-radius:8px;border:1px solid var(--line);background:rgba(95,214,255,.15);color:var(--cyan2);font-weight:800;font-size:15px}
 #keyBox{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
+[hidden]{display:none!important}
+.install-icon{width:108px;height:108px;border-radius:24px;box-shadow:0 0 30px #e600124a}
+.install-mode{--cyan:#ff7280;--cyan2:#fff;--muted:#ded1d3;--line:#e6001280;background:radial-gradient(ellipse at 50% 35%,#3b1119,#090909 68%)}
+.install-mode .ring{display:none}
+.install-mode #openApp{background:#a60012}
 </style>
 </head>
 <body>
 <div class="box">
   <div class="ring"></div>
-  <div class="logo">HAYATO</div>
-  <p id="msg">ハヤトを呼んでいます…</p>
+  <img class="install-icon" id="installIcon" src="yujiro-icon-192.png" alt="" width="108" height="108" hidden>
+  <div class="logo">勇次郎</div>
+  <p id="msg">勇次郎を呼んでいます…</p>
+  <button id="openApp" type="button" hidden>勇次郎を開く</button>
   <div id="keyBox">
     <p>最初の1回だけ、合言葉を入れてください。<br>（PCの hayato\.secrets\key.txt）</p>
     <input id="k" placeholder="合言葉" autocomplete="off">
-    <button id="ok">ハヤトを開く</button>
+    <button id="ok">勇次郎を開く</button>
   </div>
 </div>
 <script>
@@ -70,16 +79,30 @@ async function go() {
     const urls = t.trim().split("\n").map(l => { try { return JSON.parse(l).message; } catch { return ""; } })
       .filter(u => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(u || ""));
     const url = urls[urls.length - 1];
-    if (!url) { $("#msg").innerHTML = "ハヤトが見つかりません。<br>PCの電源が入っていて、ハヤトが起動しているか確認してください。"; return; }
+    if (!url) { $("#msg").innerHTML = "勇次郎が見つかりません。<br>PCの電源が入っていて、勇次郎が起動しているか確認してください。"; return; }
     await sendLife(url, key);
     $("#msg").textContent = "つながりました";
     location.replace(url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : "") + (NUDGE ? "&nudge=1" : ""));
   } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
 }
-$("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ハヤトを呼んでいます…"; go(); };
+$("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "勇次郎を呼んでいます…"; go(); };
+const installRequested = new URLSearchParams(location.search).get("install") === "1";
+const installed = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
 const hk = location.hash.match(/k=([^&]+)/);
-if (hk) { set("hayato_key", normKey(decodeURIComponent(hk[1]))); history.replaceState(null, "", location.pathname); }
-go();
+if (hk) { set("hayato_key", normKey(decodeURIComponent(hk[1]))); history.replaceState(null, "", location.pathname + location.search); }
+if (installRequested && !installed) {
+  document.body.classList.add("install-mode");
+  $("#installIcon").hidden = false;
+  $("#msg").textContent = "ブラウザーのメニューから「ホーム画面に追加」を選んでください。";
+  $("#openApp").hidden = false;
+  $("#openApp").onclick = () => {
+    $("#openApp").hidden = true;
+    $("#msg").textContent = "勇次郎を呼んでいます…";
+    go();
+  };
+} else {
+  go();
+}
 </script>
 </body>
 </html>
