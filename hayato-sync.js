@@ -22,8 +22,9 @@
   }
 
   async function send(why) {
-    const key = get("hayato_key");
-    if (!key || busy || (why !== "close" && Date.now() - last < 60 * 1000)) return;
+    // 全角まじりで保存された古い合言葉もそのまま使えるように半角へ（2026-11-16 スマホから「合言葉ちがい」で暮らしの記録が届かなかった）
+    const key = String(get("hayato_key") || "").normalize("NFKC").replace(/\s+/g, "");
+    if (!key || !/^[\x21-\x7e]+$/.test(key) || busy || (why !== "close" && Date.now() - last < 60 * 1000)) return;
     const body = {};
     for (const k of KEYS) { const v = get(k); if (v) body[k] = v; }
     if (!Object.keys(body).length) return;
