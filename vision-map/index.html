@@ -79,20 +79,21 @@ async function ensureKey() {
   if (key) return true;
   const hk = String(get("hayato_key")).normalize("NFKC").replace(/\s+/g, "");
   if (hk) {
-    try {
-      let u = get("hayato_url_cache");
-      if (!u) {
-        const t = await (await fetch(`https://ntfy.sh/${TOPIC}/json?poll=1&since=24h`)).text();
-        const us = t.trim().split("\n").map(l => { try { return JSON.parse(l).message; } catch { return ""; } }).filter(x => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(x || ""));
-        u = us[us.length - 1] || "";
-      }
-      if (u) {
-        const j = await (await fetch(u + "/api/vmap-key", { headers: { "X-Key": hk } })).json();
+    // 勇次郎の住所（トンネル）は変わることがある → 覚えている住所でだめなら、ntfyから最新を取り直してもう一度
+    const fresh = async () => {
+      const t = await (await fetch(`https://ntfy.sh/${TOPIC}/json?poll=1&since=24h`)).text();
+      const us = t.trim().split("\n").map(l => { try { return JSON.parse(l).message; } catch { return ""; } }).filter(x => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(x || ""));
+      const u = us[us.length - 1] || ""; if (u) { set("hayato_url_cache", u); set("hayato_url_at", String(Date.now())); } return u;
+    };
+    for (const cached of [get("hayato_url_cache"), ""]) {
+      try {
+        const url = cached || await fresh(); if (!url) continue;
+        const j = await (await fetch(url + "/api/vmap-key", { headers: { "X-Key": hk } })).json();
         if (j.key) { key = j.key; set("vmap_key", key); return true; }
-      }
-    } catch {}
+      } catch {}
+    }
   }
-  const k = (prompt("VISION営業地図の合言葉を入れてください（勇次郎のPCの hayato/.secrets/vmap_key.txt）") || "").trim();
+  const k = (prompt("VISION営業地図の合言葉を入れてください（勇次郎を一度開いたスマホなら、勇次郎を開いてから戻ると自動で入ります）") || "").normalize("NFKC").replace(/\s+/g, "");
   if (k) { key = k; set("vmap_key", key); return true; }
   return false;
 }
@@ -254,6 +255,14 @@ $("#tabMap").onclick = () => setView("map"); $("#tabList").onclick = () => setVi
     api = async () => []; draw(); map.fitBounds(places.map(p => [p.lat, p.lon]), { padding: [40, 40] }); return;
   }
   if (!(await ensureKey())) { toast("合言葉がないので見られません"); return; }
+  // 合言葉が合っているか確かめる（間違った合言葉だと『0件』に見えるだけなので）。違えば消して、勇次郎からもらい直す・もう一度聞く
+  for (let i = 0; i < 3; i++) {
+    let ok = false;
+    try { ok = await api("rpc/vmap_ok", { method: "POST", body: "{}" }); } catch {}
+    if (ok === true) break;
+    set("vmap_key", ""); key = "";
+    if (i === 2 || !(await ensureKey())) { toast("合言葉が違います。開き直してください"); return; }
+  }
   try {
     places = await api("vmap_places?select=*&order=updated_at.desc&limit=2000");
     draw();
