@@ -202,7 +202,7 @@ function speak(text) {
 }
 // 士業ルート＝talk.js（名乗りは不動産の会社）／システム営業＝sales_talk.js（名乗りは合同会社VISION）
 const TALK_SETS = {
-  "士業": { data: () => TALK, title: "士業の先生への初訪トーク", parts: [["reception", "① 受付で（30秒・資料を渡すだけ）", 1], ["sensei", "② 先生に会えた時（3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["leave", "⑤ 置いていく物"], ["caution", "⚠ 注意"]] },
+  "士業": { data: () => TALK, title: "士業の先生への初訪トーク", parts: [["qualify", "⓪ まず見極め：不動産が関わる案件があるか（受付でも先生でも最初に聞く）", 1], ["ifyes", "　→ ある時"], ["ifno", "　→ ない時（長く話さない）"], ["reception", "① 受付で（30秒・資料を渡すだけ）", 1], ["sensei", "② 先生に会えた時（3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["leave", "⑤ 置いていく物"], ["caution", "⚠ 注意"]] },
   "システム": { data: () => SALES_TALK, title: "システム営業の訪問トーク", parts: [["opening", "① 入口で（30秒・忙しそうなら資料を置いて帰る）", 1], ["talk", "② 話を聞いてもらえた時（2〜3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["objection", "⑤ 断られた時の返し"]] },
 };
 function openTalk(type, placeName, setName) {
