@@ -61,6 +61,7 @@
 <div id="toast"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="talk.js"></script>
+<script src="sales_talk.js"></script>
 <script>
 // VISION営業地図（2026-11-16）。ひかりの地上げ地図を手本にした別アプリ。データは ai-news のSupabase（vmap_* ・合言葉ヘッダで守る）。ひかりのDBとは別。
 const SB = "https://aevqdsozxiklyjfavvhf.supabase.co/rest/v1/", PK = "sb_publishable_3J-KuCCmuO_d7WLzQrsrTg_U3QiaF_I";
@@ -149,7 +150,7 @@ async function openSheet(id) {
       ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">🌐 HP</a>` : ""}
       ${p.email ? `<a href="mailto:${esc(p.email)}">✉ メール</a>` : ""}
     </div>
-    ${p.category === "士業ルート" ? `<div class="btns"><button id="talkBtn" class="main">🎤 初訪トーク（${esc(talkTypeOf(p.kind))}）</button></div>` : ""}
+    <div class="btns"><button id="talkBtn" class="main">🎤 ${p.category === "士業ルート" ? "初訪トーク（" + esc(talkTypeOf(p.kind)) : "訪問トーク（" + esc(salesTypeOf(p.kind))}）</button></div>
     <div class="sec">記録する</div>
     <div class="btns">
       <button data-k="訪問" class="main">🚪 訪問した</button><button data-k="電話">📞 電話した</button><button data-k="メール">✉ メール送った</button><button data-k="打合せ">🤝 打合せ</button><button data-k="メモ">📝 メモ</button>
@@ -165,7 +166,7 @@ async function openSheet(id) {
   $("#x").onclick = () => s.classList.remove("on");
   $("#save").onclick = async () => { await patch(p, { status: $("#st").value, next_action: $("#na").value, memo: $("#mm").value }); toast("保存しました"); };
   s.querySelectorAll("[data-k]").forEach(b => b.onclick = () => logForm(p, b.dataset.k));
-  if ($("#talkBtn")) $("#talkBtn").onclick = () => openTalk(talkTypeOf(p.kind), p.name);
+  if ($("#talkBtn")) $("#talkBtn").onclick = () => p.category === "士業ルート" ? openTalk(talkTypeOf(p.kind), p.name, "士業") : openTalk(salesTypeOf(p.kind), p.name, "システム");
   try {
     const logs = await api(`vmap_logs?place_id=eq.${encodeURIComponent(p.id)}&order=at.desc&limit=50`);
     $("#logs").innerHTML = logs.length ? logs.map(l => `<div class="log"><b>${esc(l.kind)}</b> ${esc(new Date(l.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }))} ${esc(l.result || "")}<br>${esc(l.note || "")}</div>`).join("") : `<p class="meta">まだありません</p>`;
@@ -199,26 +200,34 @@ function speak(text) {
   const v = speechSynthesis.getVoices().find(v => /ja/i.test(v.lang)); if (v) u.voice = v;
   speechSynthesis.speak(u);
 }
-function openTalk(type, placeName) {
-  const T = TALK[type] || TALK["共通"]; const s = $("#sheet");
-  s.innerHTML = `<button class="close" id="x">×</button><h2>🎤 初訪トーク：${esc(type)}</h2>
+// 士業ルート＝talk.js（名乗りは不動産の会社）／システム営業＝sales_talk.js（名乗りは合同会社VISION）
+const TALK_SETS = {
+  "士業": { data: () => TALK, title: "士業の先生への初訪トーク", parts: [["reception", "① 受付で（30秒・資料を渡すだけ）", 1], ["sensei", "② 先生に会えた時（3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["leave", "⑤ 置いていく物"], ["caution", "⚠ 注意"]] },
+  "システム": { data: () => SALES_TALK, title: "システム営業の訪問トーク", parts: [["opening", "① 入口で（30秒・忙しそうなら資料を置いて帰る）", 1], ["talk", "② 話を聞いてもらえた時（2〜3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["objection", "⑤ 断られた時の返し"]] },
+};
+function openTalk(type, placeName, setName) {
+  setName = setName || get("vmap_talkset") || "システム"; set("vmap_talkset", setName);
+  const S = TALK_SETS[setName], D = S.data(); const T = D[type] || D["共通"]; type = D[type] ? type : "共通";
+  const s = $("#sheet");
+  const body = S.parts.map(([k, label, voice]) => {
+    const v = T[k]; if (!v) return "";
+    const content = Array.isArray(v) ? `<ul>${v.map(w => `<li>${esc(w)}</li>`).join("")}</ul>` : `<p>${esc(fill(v))}</p>`;
+    return `<h3>${label}</h3>${voice ? `<div class="say"><button data-say="${k}">▶ 読み上げ</button><button class="stop" data-stop>■ 止める</button></div>` : ""}${content}`;
+  }).join("");
+  s.innerHTML = `<button class="close" id="x">×</button><h2>🎤 ${esc(S.title)}</h2>
+    <div class="types">${Object.keys(TALK_SETS).map(n => `<button data-set="${n}" class="${n === setName ? "on" : ""}">${n === "士業" ? "⚖ 士業ルート" : "🏪 システム営業"}</button>`).join("")}</div>
     <p class="meta">${esc(T.who)}${placeName ? "／訪問先：" + esc(placeName) : ""}</p>
-    <div class="types">${Object.keys(TALK).map(t => `<button data-t="${esc(t)}" class="${t === type ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
-    <div class="talk">
-      <h3>① 受付で（30秒・資料を渡すだけ）</h3><div class="say"><button data-say="reception">▶ 読み上げ</button><button class="stop" data-stop>■ 止める</button></div><p>${esc(fill(T.reception))}</p>
-      <h3>② 先生に会えた時（3分）</h3><div class="say"><button data-say="sensei">▶ 読み上げ</button><button class="stop" data-stop>■ 止める</button></div><p>${esc(fill(T.sensei))}</p>
-      <h3>③ 響くワード</h3><ul>${T.words.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
-      <h3>④ 聞くこと（質問）</h3><ul>${T.ask.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
-      <h3>⑤ 置いていく物</h3><p>${esc(T.leave)}</p>
-      <h3>⚠ 注意</h3><p>${esc(T.caution)}</p>
-      <h3>設定</h3><p class="meta">名乗る会社名：<b>${esc(company())}</b>　<button id="co" style="min-height:34px">変える</button>　読む速さ：<select id="rt" style="width:auto">${[0.8, 0.9, 1.0, 1.1, 1.2].map(r => `<option ${String(r) === String(+(get("vmap_rate") || 1.0)) ? "selected" : ""}>${r}</option>`).join("")}</select></p>
+    <div class="types">${Object.keys(D).map(t => `<button data-t="${esc(t)}" class="${t === type ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+    <div class="talk">${body}
+      <h3>設定</h3><p class="meta">${setName === "士業" ? `名乗る会社名：<b>${esc(company())}</b>　<button id="co" style="min-height:34px">変える</button>　` : "名乗り：合同会社VISION　"}読む速さ：<select id="rt" style="width:auto">${[0.8, 0.9, 1.0, 1.1, 1.2].map(r => `<option ${String(r) === String(+(get("vmap_rate") || 1.0)) ? "selected" : ""}>${r}</option>`).join("")}</select></p>
     </div>`;
   s.classList.add("on");
   $("#x").onclick = () => { speechSynthesis?.cancel(); s.classList.remove("on"); };
-  s.querySelectorAll("[data-t]").forEach(b => b.onclick = () => openTalk(b.dataset.t, placeName));
+  s.querySelectorAll("[data-set]").forEach(b => b.onclick = () => openTalk("共通", placeName, b.dataset.set));
+  s.querySelectorAll("[data-t]").forEach(b => b.onclick = () => openTalk(b.dataset.t, placeName, setName));
   s.querySelectorAll("[data-say]").forEach(b => b.onclick = () => speak(fill(T[b.dataset.say])));
   s.querySelectorAll("[data-stop]").forEach(b => b.onclick = () => speechSynthesis?.cancel());
-  $("#co").onclick = () => { const c = prompt("先生に名乗る会社名（不動産の話なので宅建業の会社名）", company()); if (c) { set("vmap_company", c.trim()); openTalk(type, placeName); } };
+  if ($("#co")) $("#co").onclick = () => { const c = prompt("先生に名乗る会社名（不動産の話なので宅建業の会社名）", company()); if (c) { set("vmap_company", c.trim()); openTalk(type, placeName, setName); } };
   $("#rt").onchange = e => set("vmap_rate", e.target.value);
 }
 
@@ -246,7 +255,7 @@ if (navigator.geolocation) navigator.geolocation.watchPosition(pos => {
 // ---- 切り替え
 document.querySelectorAll("#cats button").forEach(b => { b.classList.toggle("on", b.dataset.c === cat); b.onclick = () => { cat = b.dataset.c; set("vmap_cat", cat); document.querySelectorAll("#cats button").forEach(x => x.classList.toggle("on", x === b)); draw(); }; });
 function setView(v) { view = v; $("#list").style.display = v === "map" ? "none" : "block"; ["Map", "List", "Todo"].forEach(n => $("#tab" + n).classList.toggle("on", v === n.toLowerCase())); if (v !== "map") drawList(); else setTimeout(() => map.invalidateSize(), 50); }
-$("#tabTalk").onclick = () => openTalk("共通");
+$("#tabTalk").onclick = () => openTalk("共通", "", cat === "士業ルート" ? "士業" : cat === "システム営業" ? "システム" : undefined);
 $("#tabMap").onclick = () => setView("map"); $("#tabList").onclick = () => setView("list"); $("#tabTodo").onclick = () => setView("todo");
 
 (async () => {
