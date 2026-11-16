@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f3d2a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>VISION営業地図</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{--g:#0f3d2a;--g2:#1f6b48;--bg:#f4f6f4;--card:#fff;--ink:#1b241f;--sub:#5b6b62;--line:#d6ddd8}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font:15px/1.5 "Hiragino Sans","Yu Gothic",sans-serif;color:var(--ink);background:var(--bg)}
+  header{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--g);color:#fff;padding:calc(env(safe-area-inset-top) + 6px) 10px 6px;display:flex;gap:6px;align-items:center}
+  header h1{font-size:15px;margin:0 6px 0 0;white-space:nowrap}
+  .seg{display:flex;background:#ffffff22;border-radius:9px;padding:2px;gap:2px;flex:1;min-width:0}
+  .seg button{flex:1;min-height:36px;border:0;border-radius:7px;background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:700;white-space:nowrap}
+  .seg button.on{background:#fff;color:var(--g)}
+  #map{position:fixed;top:calc(env(safe-area-inset-top) + 50px);left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 58px)}
+  nav{position:fixed;left:0;right:0;bottom:0;z-index:1000;background:#fff;border-top:2px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+  nav button{flex:1;min-height:56px;border:0;background:#fff;font:inherit;font-size:12px;font-weight:700;color:var(--sub)}
+  nav button.on{color:var(--g)} nav b{display:block;font-size:19px}
+  #list{position:fixed;top:calc(env(safe-area-inset-top) + 50px);left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 58px);overflow:auto;padding:10px;display:none}
+  .row{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 3px #0001}
+  .row h3{margin:0;font-size:15px} .row p{margin:2px 0;color:var(--sub);font-size:13px}
+  .chip{display:inline-block;padding:1px 8px;border-radius:9px;font-size:12px;font-weight:700;color:#fff;margin-right:4px}
+  .fab{position:fixed;right:12px;z-index:1001;width:50px;height:50px;border-radius:25px;border:0;background:#fff;box-shadow:0 2px 8px #0004;font-size:22px}
+  #sheet{position:fixed;left:0;right:0;bottom:0;z-index:2000;background:#fff;border-radius:14px 14px 0 0;box-shadow:0 -4px 16px #0003;max-height:82vh;overflow:auto;transform:translateY(105%);transition:transform .2s;padding:12px 14px calc(env(safe-area-inset-bottom) + 16px)}
+  #sheet.on{transform:none}
+  #sheet h2{font-size:17px;margin:0 30px 4px 0} .meta{color:var(--sub);font-size:13px;margin:2px 0}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .btns a,.btns button{flex:1 1 30%;min-height:46px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:2px solid var(--g2);background:#fff;color:var(--g);font:inherit;font-weight:700;font-size:14px;text-decoration:none}
+  .btns .main{background:var(--g2);color:#fff}
+  .close{position:absolute;right:10px;top:8px;border:0;background:none;font-size:24px;color:var(--sub)}
+  select,textarea,input{width:100%;font:inherit;font-size:16px;padding:9px;border:2px solid var(--line);border-radius:8px;background:#fff}
+  .talk h3{font-size:15px;margin:14px 0 4px;color:var(--g)} .talk p{margin:4px 0;line-height:1.75} .talk ul{margin:4px 0;padding-left:20px} .talk li{margin:2px 0}
+  .say{display:flex;gap:8px;margin:6px 0} .say button{flex:1;min-height:44px;border-radius:10px;border:2px solid var(--g2);background:var(--g2);color:#fff;font:inherit;font-weight:700} .say button.stop{background:#fff;color:var(--g)}
+  .types{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .types button{min-height:40px;padding:0 12px;border-radius:20px;border:2px solid var(--g2);background:#fff;color:var(--g);font:inherit;font-weight:700} .types button.on{background:var(--g2);color:#fff}
+  .log{border-top:1px solid var(--line);padding:6px 0;font-size:13px} .log b{color:var(--g)}
+  .sec{font-weight:700;margin:12px 0 4px;font-size:14px}
+  #toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:3000;background:#000c;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;display:none}
+  .legend{position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom) + 66px);z-index:1001;background:#fffe;border-radius:8px;padding:5px 7px;font-size:11px;box-shadow:0 1px 4px #0003;max-width:60vw}
+  .legend span{display:inline-flex;align-items:center;margin:1px 5px 1px 0}
+  .dot{width:10px;height:10px;border-radius:5px;display:inline-block;margin-right:3px;border:1px solid #0003}
+  .pin{width:26px;height:26px;border-radius:13px 13px 13px 2px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px #0006;display:flex;align-items:center;justify-content:center}
+  .pin i{transform:rotate(45deg);font-style:normal;font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>VISION営業地図</h1><div class="seg" id="cats"><button data-c="all" class="on">すべて</button><button data-c="システム営業">システム営業</button><button data-c="士業ルート">士業ルート</button></div></header>
+<div id="map"></div>
+<div id="list"></div>
+<div class="legend" id="legend"></div>
+<button class="fab" id="me" style="bottom:calc(env(safe-area-inset-bottom) + 130px)" title="現在地">📍</button>
+<button class="fab" id="add" style="bottom:calc(env(safe-area-inset-bottom) + 72px)" title="ここに追加">＋</button>
+<nav><button id="tabMap" class="on"><b>🗺</b>地図</button><button id="tabList"><b>☰</b>近い順</button><button id="tabTodo"><b>✓</b>次にやる</button><button id="tabTalk"><b>🎤</b>トーク</button></nav>
+<div id="sheet"></div>
+<div id="toast"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="talk.js"></script>
+<script>
+// VISION営業地図（2026-11-16）。ひかりの地上げ地図を手本にした別アプリ。データは ai-news のSupabase（vmap_* ・合言葉ヘッダで守る）。ひかりのDBとは別。
+const SB = "https://aevqdsozxiklyjfavvhf.supabase.co/rest/v1/", PK = "sb_publishable_3J-KuCCmuO_d7WLzQrsrTg_U3QiaF_I";
+const TOPIC = "hayato-url-3218359548";
+const ST = {"未連絡":"#9aa5a0","メール済":"#2f6fd6","電話済":"#7b4fc9","訪問済":"#e08a1e","興味あり":"#18a058","打合せ":"#0b6b3a","成約":"#c9a400","見送り":"#c0392b"};
+const STATUSES = Object.keys(ST);
+const $ = s => document.querySelector(s);
+const get = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
+const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let key = get("vmap_key"), places = [], cat = get("vmap_cat") || "all", here = null, view = "map", markers = [];
+function toast(t) { const e = $("#toast"); e.textContent = t; e.style.display = "block"; clearTimeout(e._t); e._t = setTimeout(() => e.style.display = "none", 2200); }
+
+// ---- 合言葉：勇次郎の合言葉がこの端末にあれば、勇次郎から自動で受け取る。無ければ一度だけ聞く
+async function ensureKey() {
+  if (key) return true;
+  const hk = String(get("hayato_key")).normalize("NFKC").replace(/\s+/g, "");
+  if (hk) {
+    try {
+      let u = get("hayato_url_cache");
+      if (!u) {
+        const t = await (await fetch(`https://ntfy.sh/${TOPIC}/json?poll=1&since=24h`)).text();
+        const us = t.trim().split("\n").map(l => { try { return JSON.parse(l).message; } catch { return ""; } }).filter(x => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(x || ""));
+        u = us[us.length - 1] || "";
+      }
+      if (u) {
+        const j = await (await fetch(u + "/api/vmap-key", { headers: { "X-Key": hk } })).json();
+        if (j.key) { key = j.key; set("vmap_key", key); return true; }
+      }
+    } catch {}
+  }
+  const k = (prompt("VISION営業地図の合言葉を入れてください（勇次郎のPCの hayato/.secrets/vmap_key.txt）") || "").trim();
+  if (k) { key = k; set("vmap_key", key); return true; }
+  return false;
+}
+let api = async function (path, opt = {}) {
+  const r = await fetch(SB + path, { ...opt, headers: { apikey: PK, "x-vmap-key": key, "Content-Type": "application/json", Prefer: "return=representation", ...(opt.headers || {}) } });
+  if (!r.ok) throw new Error((await r.text()).slice(0, 120) || r.status);
+  return r.status === 204 ? null : r.json();
+}
+
+// ---- 地図
+const map = L.map("map", { zoomControl: false }).setView([36.03, 139.40], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+const layer = L.layerGroup().addTo(map);
+let meMarker = null;
+function icon(p) {
+  const em = p.category === "士業ルート" ? "⚖" : "🏪";
+  return L.divIcon({ className: "", html: `<div class="pin" style="background:${ST[p.status] || "#999"}"><i>${em}</i></div>`, iconSize: [26, 26], iconAnchor: [13, 26] });
+}
+function shown() { return places.filter(p => cat === "all" || p.category === cat); }
+function draw() {
+  layer.clearLayers();
+  for (const p of shown()) if (p.lat && p.lon) L.marker([p.lat, p.lon], { icon: icon(p) }).on("click", () => openSheet(p.id)).addTo(layer);
+  $("#legend").innerHTML = STATUSES.map(s => `<span><i class="dot" style="background:${ST[s]}"></i>${s}</span>`).join("");
+  if (view !== "map") drawList();
+}
+function dist(p) { if (!here || !p.lat) return null; const R = 6371, r = Math.PI / 180, a = Math.sin((p.lat - here[0]) * r / 2) ** 2 + Math.cos(here[0] * r) * Math.cos(p.lat * r) * Math.sin((p.lon - here[1]) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(a)); }
+function drawList() {
+  let ps = shown();
+  if (view === "todo") ps = ps.filter(p => !["成約", "見送り"].includes(p.status));
+  ps.sort((a, b) => view === "todo" ? (todoRank(a) - todoRank(b)) : ((dist(a) ?? 1e9) - (dist(b) ?? 1e9)));
+  $("#list").innerHTML = (ps.length ? "" : `<p class="meta">まだありません。地図の「＋」で追加できます。</p>`) + ps.map(p => {
+    const d = dist(p);
+    return `<div class="row" data-id="${esc(p.id)}"><h3>${esc(p.name)}</h3><p><span class="chip" style="background:${ST[p.status]}">${esc(p.status)}</span>${esc(p.category)}・${esc(p.kind || "")}${d != null ? `・${d < 1 ? Math.round(d * 1000) + "m" : d.toFixed(1) + "km"}` : ""}</p><p>${esc(p.next_action || p.address || "")}</p></div>`;
+  }).join("");
+  $("#list").querySelectorAll(".row").forEach(r => r.onclick = () => openSheet(r.dataset.id));
+}
+function todoRank(p) { return ({ "興味あり": 0, "打合せ": 1, "メール済": 2, "電話済": 3, "訪問済": 4, "未連絡": 5 })[p.status] ?? 9; }
+
+// ---- 詳細シート
+async function openSheet(id) {
+  const p = places.find(x => x.id === id); if (!p) return;
+  const s = $("#sheet");
+  const nav = p.lat ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address || p.name)}`;
+  s.innerHTML = `<button class="close" id="x">×</button><h2>${esc(p.name)}</h2>
+    <p class="meta"><span class="chip" style="background:${ST[p.status]}">${esc(p.status)}</span>${esc(p.category)}・${esc(p.kind || "")}${p.contact_person ? "・" + esc(p.contact_person) : ""}</p>
+    <p class="meta">${esc(p.address || "（住所未入力）")}</p>
+    ${p.next_action ? `<p class="meta">次にやること：${esc(p.next_action)}</p>` : ""}
+    <div class="btns">
+      ${p.phone ? `<a href="tel:${esc(p.phone.replace(/[^0-9+]/g, ""))}" class="main">📞 電話</a>` : ""}
+      <a href="${nav}" target="_blank" rel="noopener">🚗 ナビ</a>
+      ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">🌐 HP</a>` : ""}
+      ${p.email ? `<a href="mailto:${esc(p.email)}">✉ メール</a>` : ""}
+    </div>
+    ${p.category === "士業ルート" ? `<div class="btns"><button id="talkBtn" class="main">🎤 初訪トーク（${esc(talkTypeOf(p.kind))}）</button></div>` : ""}
+    <div class="sec">記録する</div>
+    <div class="btns">
+      <button data-k="訪問" class="main">🚪 訪問した</button><button data-k="電話">📞 電話した</button><button data-k="メール">✉ メール送った</button><button data-k="打合せ">🤝 打合せ</button><button data-k="メモ">📝 メモ</button>
+    </div>
+    <div id="logForm"></div>
+    <div class="sec">状態</div><select id="st">${STATUSES.map(x => `<option ${x === p.status ? "selected" : ""}>${x}</option>`).join("")}</select>
+    <div class="sec">次にやること</div><input id="na" value="${esc(p.next_action || "")}" placeholder="例：11/20に電話で一押し">
+    <div class="sec">メモ</div><textarea id="mm" rows="3">${esc(p.memo || "")}</textarea>
+    <div class="btns"><button class="main" id="save">保存</button></div>
+    <div class="sec">これまでの記録</div><div id="logs"><p class="meta">読み込み中…</p></div>
+    <p class="meta" style="margin-top:12px">電話 ${esc(p.phone || "なし")}／メール ${esc(p.email || "なし")}${p.source ? "／出どころ " + esc(p.source) : ""}</p>`;
+  s.classList.add("on");
+  $("#x").onclick = () => s.classList.remove("on");
+  $("#save").onclick = async () => { await patch(p, { status: $("#st").value, next_action: $("#na").value, memo: $("#mm").value }); toast("保存しました"); };
+  s.querySelectorAll("[data-k]").forEach(b => b.onclick = () => logForm(p, b.dataset.k));
+  if ($("#talkBtn")) $("#talkBtn").onclick = () => openTalk(talkTypeOf(p.kind), p.name);
+  try {
+    const logs = await api(`vmap_logs?place_id=eq.${encodeURIComponent(p.id)}&order=at.desc&limit=50`);
+    $("#logs").innerHTML = logs.length ? logs.map(l => `<div class="log"><b>${esc(l.kind)}</b> ${esc(new Date(l.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }))} ${esc(l.result || "")}<br>${esc(l.note || "")}</div>`).join("") : `<p class="meta">まだありません</p>`;
+  } catch (e) { $("#logs").innerHTML = `<p class="meta">読めませんでした ${esc(e.message)}</p>`; }
+}
+const RESULTS = { "訪問": ["不在", "受付に資料を渡した", "会えた・話せた", "興味あり", "断られた"], "電話": ["出なかった", "話せた", "興味あり", "折り返し待ち", "断られた"], "メール": ["送った", "返信あり・興味あり", "返信あり・断り"], "打合せ": ["日程が決まった", "打合せした", "見積りを出す", "成約"], "メモ": ["メモ"] };
+const NEXT_ST = { "訪問": "訪問済", "電話": "電話済", "メール": "メール済", "打合せ": "打合せ" };
+function logForm(p, k) {
+  $("#logForm").innerHTML = `<div class="sec">${k}の結果</div><div class="btns">${RESULTS[k].map(r => `<button data-r="${r}">${r}</button>`).join("")}</div><textarea id="ln" rows="2" placeholder="ひとこと（任意）"></textarea>`;
+  $("#logForm").querySelectorAll("[data-r]").forEach(b => b.onclick = async () => {
+    const r = b.dataset.r;
+    await api("vmap_logs", { method: "POST", body: JSON.stringify({ place_id: p.id, kind: k, result: r, note: $("#ln").value }) });
+    let st = /興味あり/.test(r) ? "興味あり" : /断/.test(r) ? "見送り" : r === "成約" ? "成約" : (NEXT_ST[k] || p.status);
+    if (["興味あり", "打合せ", "成約"].includes(p.status) && !["見送り", "成約"].includes(st) && st !== "打合せ") st = p.status;  // 良い状態を下げない
+    await patch(p, { status: st });
+    toast(`${k}：${r} を記録しました`); openSheet(p.id);
+  });
+}
+async function patch(p, f) {
+  const [row] = await api(`vmap_places?id=eq.${encodeURIComponent(p.id)}`, { method: "PATCH", body: JSON.stringify({ ...f, updated_at: new Date().toISOString() }) });
+  Object.assign(p, row); draw();
+}
+
+// ---- 士業の先生への初訪トーク（talk.js）。▶で読み上げ（スマホの読み上げ機能・無料・電波がなくても可）
+function company() { return get("vmap_company") || TALK_COMPANY_DEFAULT; }
+function fill(t) { return String(t || "").replaceAll("{会社}", company()); }
+function speak(text) {
+  if (!("speechSynthesis" in window)) { toast("この端末は読み上げに対応していません"); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = "ja-JP"; u.rate = +(get("vmap_rate") || 1.0);
+  const v = speechSynthesis.getVoices().find(v => /ja/i.test(v.lang)); if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+function openTalk(type, placeName) {
+  const T = TALK[type] || TALK["共通"]; const s = $("#sheet");
+  s.innerHTML = `<button class="close" id="x">×</button><h2>🎤 初訪トーク：${esc(type)}</h2>
+    <p class="meta">${esc(T.who)}${placeName ? "／訪問先：" + esc(placeName) : ""}</p>
+    <div class="types">${Object.keys(TALK).map(t => `<button data-t="${esc(t)}" class="${t === type ? "on" : ""}">${esc(t)}</button>`).join("")}</div>
+    <div class="talk">
+      <h3>① 受付で（30秒・資料を渡すだけ）</h3><div class="say"><button data-say="reception">▶ 読み上げ</button><button class="stop" data-stop>■ 止める</button></div><p>${esc(fill(T.reception))}</p>
+      <h3>② 先生に会えた時（3分）</h3><div class="say"><button data-say="sensei">▶ 読み上げ</button><button class="stop" data-stop>■ 止める</button></div><p>${esc(fill(T.sensei))}</p>
+      <h3>③ 響くワード</h3><ul>${T.words.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
+      <h3>④ 聞くこと（質問）</h3><ul>${T.ask.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
+      <h3>⑤ 置いていく物</h3><p>${esc(T.leave)}</p>
+      <h3>⚠ 注意</h3><p>${esc(T.caution)}</p>
+      <h3>設定</h3><p class="meta">名乗る会社名：<b>${esc(company())}</b>　<button id="co" style="min-height:34px">変える</button>　読む速さ：<select id="rt" style="width:auto">${[0.8, 0.9, 1.0, 1.1, 1.2].map(r => `<option ${String(r) === String(+(get("vmap_rate") || 1.0)) ? "selected" : ""}>${r}</option>`).join("")}</select></p>
+    </div>`;
+  s.classList.add("on");
+  $("#x").onclick = () => { speechSynthesis?.cancel(); s.classList.remove("on"); };
+  s.querySelectorAll("[data-t]").forEach(b => b.onclick = () => openTalk(b.dataset.t, placeName));
+  s.querySelectorAll("[data-say]").forEach(b => b.onclick = () => speak(fill(T[b.dataset.say])));
+  s.querySelectorAll("[data-stop]").forEach(b => b.onclick = () => speechSynthesis?.cancel());
+  $("#co").onclick = () => { const c = prompt("先生に名乗る会社名（不動産の話なので宅建業の会社名）", company()); if (c) { set("vmap_company", c.trim()); openTalk(type, placeName); } };
+  $("#rt").onchange = e => set("vmap_rate", e.target.value);
+}
+
+// ---- 追加（今いる場所 or 地図の真ん中に）
+$("#add").onclick = async () => {
+  const c = here || [map.getCenter().lat, map.getCenter().lng];
+  const name = prompt("名前（お店・会社・事務所）"); if (!name) return;
+  const category = confirm("士業の先生（弁護士・司法書士・税理士など）ですか？\nOK＝士業ルート／キャンセル＝システム営業") ? "士業ルート" : "システム営業";
+  const kind = prompt(category === "士業ルート" ? "種類（例：司法書士）" : "業種（例：美容室）") || "";
+  const phone = prompt("電話番号（わからなければ空でOK）") || "";
+  const row = { id: "m" + Date.now().toString(36), name, category, kind, phone, lat: c[0], lon: c[1], source: "手入力" };
+  try { const [r] = await api("vmap_places", { method: "POST", body: JSON.stringify(row) }); places.push(r); draw(); openSheet(r.id); toast("追加しました（ピンの場所＝今いる所）"); }
+  catch (e) { toast("追加できませんでした " + e.message); }
+};
+
+// ---- 現在地
+$("#me").onclick = () => { if (here) map.setView(here, 16); else toast("現在地を探しています…"); };
+if (navigator.geolocation) navigator.geolocation.watchPosition(pos => {
+  here = [pos.coords.latitude, pos.coords.longitude];
+  if (!meMarker) { meMarker = L.circleMarker(here, { radius: 8, color: "#fff", weight: 3, fillColor: "#1a73e8", fillOpacity: 1 }).addTo(map); }
+  else meMarker.setLatLng(here);
+  if (view !== "map") drawList();
+}, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
+
+// ---- 切り替え
+document.querySelectorAll("#cats button").forEach(b => { b.classList.toggle("on", b.dataset.c === cat); b.onclick = () => { cat = b.dataset.c; set("vmap_cat", cat); document.querySelectorAll("#cats button").forEach(x => x.classList.toggle("on", x === b)); draw(); }; });
+function setView(v) { view = v; $("#list").style.display = v === "map" ? "none" : "block"; ["Map", "List", "Todo"].forEach(n => $("#tab" + n).classList.toggle("on", v === n.toLowerCase())); if (v !== "map") drawList(); else setTimeout(() => map.invalidateSize(), 50); }
+$("#tabTalk").onclick = () => openTalk("共通");
+$("#tabMap").onclick = () => setView("map"); $("#tabList").onclick = () => setView("list"); $("#tabTodo").onclick = () => setView("todo");
+
+(async () => {
+  if (/demo=1/.test(location.search)) {  // 見た目の確認用（データは見本・保存しない）
+    places = [{id:"d1",name:"見本：〇〇工務店",category:"システム営業",kind:"工務店",status:"メール済",lat:36.0306,lon:139.4053,phone:"0000-00-0000",address:"埼玉県東松山市（見本）",next_action:"11/20に電話で一押し"},
+              {id:"d2",name:"見本：〇〇司法書士事務所",category:"士業ルート",kind:"司法書士",status:"未連絡",lat:36.0384,lon:139.3994,address:"埼玉県東松山市（見本）"},
+              {id:"d3",name:"見本：〇〇美容室",category:"システム営業",kind:"美容室",status:"興味あり",lat:36.0022,lon:139.3973}];
+    api = async () => []; draw(); map.fitBounds(places.map(p => [p.lat, p.lon]), { padding: [40, 40] }); return;
+  }
+  if (!(await ensureKey())) { toast("合言葉がないので見られません"); return; }
+  try {
+    places = await api("vmap_places?select=*&order=updated_at.desc&limit=2000");
+    draw();
+    const pts = shown().filter(p => p.lat).map(p => [p.lat, p.lon]);
+    if (pts.length) map.fitBounds(pts, { padding: [40, 40], maxZoom: 14 });
+  } catch (e) { toast("読み込めませんでした（合言葉？） " + e.message); if (/401|403|permission/.test(e.message)) { set("vmap_key", ""); } }
+})();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
