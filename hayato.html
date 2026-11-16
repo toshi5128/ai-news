@@ -84,7 +84,18 @@ async function go() {
     if (!url) { $("#msg").innerHTML = "勇次郎が見つかりません。<br>PCの電源が入っていて、勇次郎が起動しているか確認してください。"; return; }
     await sendLife(url, key);
     $("#msg").textContent = "つながりました";
-    location.replace(url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : "") + (NUDGE ? "&nudge=1" : ""));
+    const dest = url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : "") + (NUDGE ? "&nudge=1" : "") + (/req/.test(location.hash) ? "&req=1" : "");
+    // ホーム画面のアプリから開いた時は、この入口の中に勇次郎を全画面で埋め込む（別のURLへ飛ぶと、上にURLの帯が出て「サイト」に見えていた 2026-11-16）
+    if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) {
+      const f = document.createElement("iframe");
+      f.src = dest;
+      f.allow = "microphone; autoplay; clipboard-write; fullscreen";
+      f.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;background:#111;z-index:99";
+      document.body.append(f);
+      document.body.style.overflow = "hidden";
+      return;
+    }
+    location.replace(dest);
   } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
 }
 $("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; if (/[^!-~]/.test(v)) { $("#msg").textContent = "合言葉は英数字で入れてください"; return; } set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "勇次郎を呼んでいます…"; go(); };
