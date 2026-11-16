@@ -75,6 +75,8 @@ let key = get("vmap_key"), places = [], cat = get("vmap_cat") || "all", here = n
 function toast(t) { const e = $("#toast"); e.textContent = t; e.style.display = "block"; clearTimeout(e._t); e._t = setTimeout(() => e.style.display = "none", 2200); }
 
 // ---- 合言葉：勇次郎の合言葉がこの端末にあれば、勇次郎から自動で受け取る。無ければ一度だけ聞く
+// 勇次郎の「🗺 営業地図」ボタンから来た時は、合言葉が #vk= で付いてくる → 覚えて、アドレスからは消す
+(() => { const m = location.hash.match(/vk=([A-Za-z0-9]+)/); if (m) { key = m[1]; set("vmap_key", key); history.replaceState(null, "", location.pathname + location.search); } })();
 async function ensureKey() {
   if (key) return true;
   const hk = String(get("hayato_key")).normalize("NFKC").replace(/\s+/g, "");
