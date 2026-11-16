@@ -86,7 +86,7 @@ async function go() {
     $("#msg").textContent = "つながりました";
     const dest = url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : "") + (NUDGE ? "&nudge=1" : "") + (/req/.test(location.hash) ? "&req=1" : "");
     // ホーム画面のアプリから開いた時は、この入口の中に勇次郎を全画面で埋め込む（別のURLへ飛ぶと、上にURLの帯が出て「サイト」に見えていた 2026-11-16）
-    if (navigator.standalone || matchMedia("(display-mode: standalone)").matches) {
+    if (!/[?&]noembed=1/.test(location.search)) {  // いつでも埋め込む（アプリ判定がずれても帯を出さない）。?noembed=1 で前の飛び方
       const f = document.createElement("iframe");
       f.src = dest;
       f.allow = "microphone; autoplay; clipboard-write; fullscreen";
