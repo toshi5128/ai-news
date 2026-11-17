@@ -1,13 +1,13 @@
 {
-  "name": "勇次郎",
-  "short_name": "勇次郎",
+  "name": "秘書",
+  "short_name": "秘書",
   "start_url": "./hayato.html",
   "scope": "./hayato.html",
   "display": "standalone",
-  "background_color": "#090909",
-  "theme_color": "#090909",
+  "background_color": "#14213d",
+  "theme_color": "#14213d",
   "icons": [
-    {"src":"yujiro-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
-    {"src":"yujiro-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+    {"src":"hisho-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"hisho-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
   ]
 }
