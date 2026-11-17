@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#14213d">
-<meta name="apple-mobile-web-app-title" content="秘書">
+<meta name="apple-mobile-web-app-title" content="もも">
 <link rel="manifest" href="hayato-manifest.json?v=hisho">
 <link rel="apple-touch-icon" href="hisho-icon-180.png" sizes="180x180">
 <link rel="icon" href="hisho-icon-192.png" type="image/png">
-<title>秘書</title>
+<title>もも</title>
 <style>
 :root{--bg:#14213d;--cyan:#d8ae55;--cyan2:#f1d58e;--text:#f4f2ee;--muted:#c9cfdb;--line:rgba(216,174,85,.5)}
 html,body{margin:0;height:100%;background:radial-gradient(ellipse at 50% 35%,#22345c,#14213d 65%);color:var(--text);font-family:"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif}
@@ -31,13 +31,13 @@ button{min-height:46px;padding:0 22px;border-radius:8px;border:1px solid var(--l
 <div class="box">
   <div class="ring"></div>
   <img class="install-icon" id="installIcon" src="hisho-icon-192.png" alt="" width="108" height="108" hidden>
-  <div class="logo">秘書</div>
-  <p id="msg">秘書を呼んでいます…</p>
-  <button id="openApp" type="button" hidden>秘書を開く</button>
+  <div class="logo">もも</div>
+  <p id="msg">ももを呼んでいます…</p>
+  <button id="openApp" type="button" hidden>ももを開く</button>
   <div id="keyBox">
     <p>最初の1回だけ、合言葉を入れてください。<br>（PCの hayato\.secrets\key.txt）</p>
     <input id="k" placeholder="合言葉" autocomplete="off">
-    <button id="ok">秘書を開く</button>
+    <button id="ok">ももを開く</button>
   </div>
 </div>
 <script>
@@ -74,18 +74,18 @@ async function sendLife(url, key) {
 async function go() {
   const key = normKey(get("hayato_key"));
   if (!key) { $("#msg").textContent = "合言葉がまだありません"; $("#keyBox").style.display = "flex"; return; }
-  // 英数字・記号以外（日本語など）が混じった合言葉は送れない（2026-11-16 秘書の画面で案件と絵が出なかった）→ 入れ直してもらう
+  // 英数字・記号以外（日本語など）が混じった合言葉は送れない（2026-11-16 ももの画面で案件と絵が出なかった）→ 入れ直してもらう
   if (/[^!-~]/.test(key)) { set("hayato_key", ""); $("#msg").textContent = "合言葉を英数字で入れ直してください（日本語が混じっていました）"; $("#keyBox").style.display = "flex"; return; }
   try {
     const t = await (await fetch(`https://ntfy.sh/${TOPIC}/json?poll=1&since=24h`)).text();
     const urls = t.trim().split("\n").map(l => { try { return JSON.parse(l).message; } catch { return ""; } })
       .filter(u => /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(u || ""));
     const url = urls[urls.length - 1];
-    if (!url) { $("#msg").innerHTML = "秘書が見つかりません。<br>PCの電源が入っていて、秘書が起動しているか確認してください。"; return; }
+    if (!url) { $("#msg").innerHTML = "ももが見つかりません。<br>PCの電源が入っていて、ももが起動しているか確認してください。"; return; }
     await sendLife(url, key);
     $("#msg").textContent = "つながりました";
     const dest = url + "/#k=" + encodeURIComponent(key) + (MORNING ? "&morning=1" : "") + (NUDGE ? "&nudge=1" : "") + (/req/.test(location.hash) ? "&req=1" : "") + (/inbox|check/.test(location.hash) ? "&inbox=1" : "") + (/news/.test(location.hash) ? "&news=1" : "");
-    // ホーム画面のアプリから開いた時は、この入口の中に秘書を全画面で埋め込む（別のURLへ飛ぶと、上にURLの帯が出て「サイト」に見えていた 2026-11-16）
+    // ホーム画面のアプリから開いた時は、この入口の中にももを全画面で埋め込む（別のURLへ飛ぶと、上にURLの帯が出て「サイト」に見えていた 2026-11-16）
     if (!/[?&]noembed=1/.test(location.search)) {  // いつでも埋め込む（アプリ判定がずれても帯を出さない）。?noembed=1 で前の飛び方
       const f = document.createElement("iframe");
       f.src = dest;
@@ -98,7 +98,7 @@ async function go() {
     location.replace(dest);
   } catch (e) { $("#msg").textContent = "つながりませんでした（" + e.message + "）"; }
 }
-$("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; if (/[^!-~]/.test(v)) { $("#msg").textContent = "合言葉は英数字で入れてください"; return; } set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "秘書を呼んでいます…"; go(); };
+$("#ok").onclick = () => { const v = normKey($("#k").value); if (!v) return; if (/[^!-~]/.test(v)) { $("#msg").textContent = "合言葉は英数字で入れてください"; return; } set("hayato_key", v); $("#keyBox").style.display = "none"; $("#msg").textContent = "ももを呼んでいます…"; go(); };
 const installRequested = new URLSearchParams(location.search).get("install") === "1";
 const installed = navigator.standalone || matchMedia("(display-mode: standalone)").matches;
 const hk = location.hash.match(/k=([^&]+)/);
@@ -110,7 +110,7 @@ if (installRequested && !installed) {
   $("#openApp").hidden = false;
   $("#openApp").onclick = () => {
     $("#openApp").hidden = true;
-    $("#msg").textContent = "秘書を呼んでいます…";
+    $("#msg").textContent = "ももを呼んでいます…";
     go();
   };
 } else {
