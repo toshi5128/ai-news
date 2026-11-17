@@ -66,8 +66,10 @@
 // VISION営業地図（2026-11-16）。ひかりの地上げ地図を手本にした別アプリ。データは ai-news のSupabase（vmap_* ・合言葉ヘッダで守る）。ひかりのDBとは別。
 const SB = "https://aevqdsozxiklyjfavvhf.supabase.co/rest/v1/", PK = "sb_publishable_3J-KuCCmuO_d7WLzQrsrTg_U3QiaF_I";
 const TOPIC = "hayato-url-3218359548";
-const ST = {"未連絡":"#9aa5a0","メール済":"#2f6fd6","電話済":"#7b4fc9","訪問済":"#e08a1e","興味あり":"#18a058","打合せ":"#0b6b3a","成約":"#c9a400","見送り":"#c0392b"};
-const STATUSES = Object.keys(ST);
+// 2026-11-17 地上げに合わせて細かく（ひかりアプリ v9.747 と同じ中身）。興味あり＝昔の名前（見込みありと同じ）
+const ST = {"未連絡":"#9aa5a0","メール済":"#2f6fd6","電話済":"#7b4fc9","不在":"#64748b","資料渡し済":"#e08a1e","訪問済":"#d97706","見込み候補":"#eab308","見込みあり":"#18a058","打合せ":"#0b6b3a","成約":"#c9a400","見込無し":"#6b7280","見送り":"#c0392b","対象外":"#334155","興味あり":"#18a058"};
+const STATUSES = Object.keys(ST).filter(k => k !== "興味あり");
+const DONE_ST = ["成約", "見込無し", "見送り", "対象外"];
 const $ = s => document.querySelector(s);
 const get = k => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
@@ -125,7 +127,7 @@ function draw() {
 function dist(p) { if (!here || !p.lat) return null; const R = 6371, r = Math.PI / 180, a = Math.sin((p.lat - here[0]) * r / 2) ** 2 + Math.cos(here[0] * r) * Math.cos(p.lat * r) * Math.sin((p.lon - here[1]) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(a)); }
 function drawList() {
   let ps = shown();
-  if (view === "todo") ps = ps.filter(p => !["成約", "見送り"].includes(p.status));
+  if (view === "todo") ps = ps.filter(p => !DONE_ST.includes(p.status));
   ps.sort((a, b) => view === "todo" ? (todoRank(a) - todoRank(b)) : ((dist(a) ?? 1e9) - (dist(b) ?? 1e9)));
   $("#list").innerHTML = (ps.length ? "" : `<p class="meta">まだありません。地図の「＋」で追加できます。</p>`) + ps.map(p => {
     const d = dist(p);
@@ -133,7 +135,7 @@ function drawList() {
   }).join("");
   $("#list").querySelectorAll(".row").forEach(r => r.onclick = () => openSheet(r.dataset.id));
 }
-function todoRank(p) { return ({ "興味あり": 0, "打合せ": 1, "メール済": 2, "電話済": 3, "訪問済": 4, "未連絡": 5 })[p.status] ?? 9; }
+function todoRank(p) { return ({ "打合せ": 0, "見込みあり": 1, "興味あり": 1, "見込み候補": 2, "メール済": 3, "電話済": 4, "資料渡し済": 5, "訪問済": 5, "不在": 6, "未連絡": 7 })[p.status] ?? 9; }
 
 // ---- 詳細シート
 async function openSheet(id) {
@@ -172,15 +174,21 @@ async function openSheet(id) {
     $("#logs").innerHTML = logs.length ? logs.map(l => `<div class="log"><b>${esc(l.kind)}</b> ${esc(new Date(l.at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }))} ${esc(l.result || "")}<br>${esc(l.note || "")}</div>`).join("") : `<p class="meta">まだありません</p>`;
   } catch (e) { $("#logs").innerHTML = `<p class="meta">読めませんでした ${esc(e.message)}</p>`; }
 }
-const RESULTS = { "訪問": ["不在", "受付に資料を渡した", "会えた・話せた", "興味あり", "断られた"], "電話": ["出なかった", "話せた", "興味あり", "折り返し待ち", "断られた"], "メール": ["送った", "返信あり・興味あり", "返信あり・断り"], "打合せ": ["日程が決まった", "打合せした", "見積りを出す", "成約"], "メモ": ["メモ"] };
+const RESULTS = { "訪問": ["不在", "受付に資料を渡した", "会えた・話せた", "考えておく", "興味あり", "断られた", "閉業・HPあり"], "電話": ["出なかった", "話せた", "折り返し待ち", "考えておく", "興味あり", "断られた"], "メール": ["送った", "返信あり・興味あり", "返信あり・断り"], "打合せ": ["日程が決まった", "打合せした", "見積りを出す", "成約"], "メモ": ["メモ"] };
 const NEXT_ST = { "訪問": "訪問済", "電話": "電話済", "メール": "メール済", "打合せ": "打合せ" };
+function stFromResult(k, r, cur) {
+  const m = { "不在": "不在", "受付に資料を渡した": "資料渡し済", "会えた・話せた": "訪問済", "考えておく": "見込み候補", "閉業・HPあり": "対象外", "成約": "成約", "日程が決まった": "打合せ", "打合せした": "打合せ", "見積りを出す": "打合せ" };
+  const st = m[r] || (/興味あり/.test(r) ? "見込みあり" : /断/.test(r) ? "見込無し" : (NEXT_ST[k] || cur));
+  if (DONE_ST.includes(st)) return st;
+  const rank = { "未連絡": 0, "メール済": 1, "電話済": 1, "不在": 1, "資料渡し済": 2, "訪問済": 2, "見込み候補": 3, "見込みあり": 4, "興味あり": 4, "打合せ": 5, "成約": 6 };
+  return (rank[cur] != null && (rank[st] ?? 0) < rank[cur]) ? cur : st; // 良い状態を下げない
+}
 function logForm(p, k) {
   $("#logForm").innerHTML = `<div class="sec">${k}の結果</div><div class="btns">${RESULTS[k].map(r => `<button data-r="${r}">${r}</button>`).join("")}</div><textarea id="ln" rows="2" placeholder="ひとこと（任意）"></textarea>`;
   $("#logForm").querySelectorAll("[data-r]").forEach(b => b.onclick = async () => {
     const r = b.dataset.r;
     await api("vmap_logs", { method: "POST", body: JSON.stringify({ place_id: p.id, kind: k, result: r, note: $("#ln").value }) });
-    let st = /興味あり/.test(r) ? "興味あり" : /断/.test(r) ? "見送り" : r === "成約" ? "成約" : (NEXT_ST[k] || p.status);
-    if (["興味あり", "打合せ", "成約"].includes(p.status) && !["見送り", "成約"].includes(st) && st !== "打合せ") st = p.status;  // 良い状態を下げない
+    const st = stFromResult(k, r, p.status);
     await patch(p, { status: st });
     toast(`${k}：${r} を記録しました`); openSheet(p.id);
   });
