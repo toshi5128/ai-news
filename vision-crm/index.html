@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#06281a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>VISION お客さんカルテ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --deep:#053820;--deep2:#0b4a2c;--night:#06281a;--gold:#c9a24a;--gold2:#e9d9a8;--cream:#f8f3e6;
+  --bg:#f2f4f1;--card:#fff;--ink:#17231c;--sub:#5f6f66;--line:#dde3de;
+  --red:#b3261e;--redbg:#fbeceb;--amber:#a76a00;--amberbg:#fdf3dc;--ok:#1d7a4a;--okbg:#e6f3ec;--blue:#245c9c;--bluebg:#e8f0fa;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;font-size:15px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-feature-settings:"tnum";letter-spacing:.01em}
+.en{font-family:Marcellus,serif;letter-spacing:.12em}
+/* ヘッダー */
+header{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--night),var(--deep) 60%,var(--deep2));color:#fff;padding:calc(env(safe-area-inset-top) + 10px) 16px 12px;border-bottom:2px solid var(--gold)}
+.hd{display:flex;align-items:center;gap:12px;max-width:760px;margin:0 auto}
+.hd img{width:40px;height:40px;border-radius:10px;box-shadow:0 0 0 1px rgba(201,162,74,.6)}
+.hd .t1{font-size:11px;color:var(--gold2)}
+.hd .t2{font-size:17px;font-weight:700;letter-spacing:.04em}
+.hd .sp{flex:1}
+.hd .demo{font-size:11px;background:var(--gold);color:var(--night);border-radius:20px;padding:2px 10px;font-weight:700}
+main{max-width:760px;margin:0 auto;padding:16px 16px calc(96px + env(safe-area-inset-bottom))}
+/* 下のタブ */
+nav{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--night);border-top:1px solid rgba(201,162,74,.5);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav .in{display:flex;width:100%;max-width:760px}
+nav button{flex:1;background:none;border:0;color:#9fb3a8;padding:9px 0 8px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+nav button svg{width:22px;height:22px}
+nav button.on{color:var(--gold)}
+nav .badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--red);color:#fff;border-radius:10px;font-size:10px;min-width:17px;padding:0 4px;line-height:17px}
+/* 共通部品 */
+h2{font-size:13px;color:var(--sub);font-weight:700;margin:22px 2px 8px;letter-spacing:.06em;display:flex;align-items:center;gap:8px}
+h2::before{content:"";width:4px;height:14px;background:var(--gold);border-radius:2px}
+.card{background:var(--card);border:2px solid #cfd8d2;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 6px rgba(5,56,32,.06)}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.muted{color:var(--sub);font-size:13px}
+.small{font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.c-prep{background:var(--bluebg);color:var(--blue)}.c-live{background:var(--okbg);color:var(--ok)}.c-stopped{background:var(--redbg);color:var(--red)}
+.c-canceling{background:var(--amberbg);color:var(--amber)}.c-closed{background:#eceeed;color:#6b746f}.c-warn{background:var(--redbg);color:var(--red)}
+.btn{white-space:nowrap;border:0;border-radius:12px;padding:12px 16px;font-weight:700;background:var(--deep);color:#fff;cursor:pointer}
+.btn.gold{background:var(--gold);color:var(--night)}
+.btn.ghost{background:#fff;color:var(--deep);border:2px solid var(--deep)}
+.btn.red{background:var(--red)}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.4}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.fab{position:fixed;right:max(16px,calc(50% - 364px));bottom:calc(76px + env(safe-area-inset-bottom));z-index:15;background:var(--gold);color:var(--night);border:0;border-radius:30px;padding:14px 20px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.empty{text-align:center;color:var(--sub);padding:28px 10px}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--night);color:#fff;border:1px solid var(--gold);padding:10px 16px;border-radius:12px;z-index:60;font-size:14px;max-width:90vw}
+/* ホームの数字 */
+.hero{background:linear-gradient(140deg,var(--night),var(--deep));color:#fff;border-radius:18px;padding:18px;position:relative;overflow:hidden;border:1px solid rgba(201,162,74,.5)}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;border:1px solid rgba(201,162,74,.25)}
+.hero .lb{font-size:12px;color:var(--gold2)}
+.hero .big{font-size:38px;font-weight:900;color:var(--gold);line-height:1.1}
+.hero .big small{font-size:16px;color:#fff;margin-left:2px}
+.bar{height:10px;background:rgba(255,255,255,.15);border-radius:6px;overflow:hidden;margin:10px 0 6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#f0d58a);border-radius:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.kpi{background:#fff;border:2px solid #cfd8d2;border-radius:12px;padding:10px;text-align:center}
+.kpi b{display:block;font-size:20px;color:var(--deep)}
+.kpi span{font-size:11px;color:var(--sub)}
+.kpi.bad b{color:var(--red)}
+/* やること */
+.todo{display:flex;gap:12px;align-items:flex-start;background:#fff;border:2px solid #cfd8d2;border-left:6px solid var(--amber);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer}
+.todo.hi{border-left-color:var(--red)}
+.todo.lo{border-left-color:var(--blue)}
+.todo .ic{font-size:20px;line-height:1.2}
+.todo b{display:block;font-size:14px}
+/* 一覧 */
+.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px;scrollbar-width:none}
+.filters button{flex:none;border:2px solid #cfd8d2;background:#fff;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--sub)}
+.filters button.on{background:var(--deep);border-color:var(--deep);color:#fff}
+.search{width:100%;border:2px solid #cfd8d2;border-radius:12px;padding:10px 12px;margin:10px 0;background:#fff}
+.cust{cursor:pointer}
+.cust .nm{font-size:16px;font-weight:700}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.meta span{font-size:12px;background:var(--bg);border-radius:8px;padding:2px 8px;color:var(--sub)}
+.meta span.bad{background:var(--redbg);color:var(--red);font-weight:700}
+.meta span.good{background:var(--okbg);color:var(--ok)}
+/* カルテ */
+.kh{background:linear-gradient(140deg,var(--night),var(--deep));color:#fff;border-radius:18px;padding:16px;border:1px solid rgba(201,162,74,.5)}
+.kh .nm{font-size:21px;font-weight:900}
+.kh .sub{font-size:12px;color:var(--gold2)}
+.kh .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.kh .acts a,.kh .acts button{background:rgba(255,255,255,.1);border:1px solid rgba(201,162,74,.6);color:#fff;border-radius:10px;padding:7px 12px;font-size:13px;text-decoration:none;font-weight:700}
+.back{background:none;border:0;color:var(--deep);font-weight:700;padding:4px 0 10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px}
+.kv dt{color:var(--sub)}.kv dd{margin:0;font-weight:500}
+.alert{border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:8px;font-weight:500}
+.alert.red{background:var(--redbg);color:var(--red)}.alert.amber{background:var(--amberbg);color:var(--amber)}.alert.blue{background:var(--bluebg);color:var(--blue)}.alert.ok{background:var(--okbg);color:var(--ok)}
+.months{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.mo{border-radius:10px;padding:6px 2px;text-align:center;font-size:11px;border:2px solid transparent;cursor:pointer;background:var(--bg);color:var(--sub)}
+.mo b{display:block;font-size:13px}
+.mo.paid{background:var(--okbg);color:var(--ok)}.mo.failed{background:var(--redbg);color:var(--red)}.mo.pending{background:var(--amberbg);color:var(--amber)}.mo.waived{background:#eceeed;color:#6b746f}.mo.future{opacity:.45}
+.mo.now{border-color:var(--gold)}
+.counter{display:flex;align-items:baseline;gap:4px}
+.counter b{font-size:34px;color:var(--deep);font-weight:900}
+.counter.over b{color:var(--red)}
+.dots{display:flex;gap:6px;margin-left:10px}
+.dots i{width:14px;height:14px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--gold)}
+.req{border-top:1px solid var(--line);padding:10px 0}
+.req:first-child{border-top:0}
+.tl{border-left:2px solid var(--gold2);margin-left:6px;padding-left:14px}
+.tl .ev{position:relative;padding:4px 0 12px}
+.tl .ev::before{content:"";position:absolute;left:-21px;top:9px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
+.tl .ev.trouble::before{background:var(--red)}
+.check{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.check input{width:20px;height:20px;accent-color:var(--deep)}
+/* お金 */
+.chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:16px}
+.chart .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.chart .c i{display:block;width:100%;max-width:34px;background:var(--deep);border-radius:6px 6px 2px 2px;min-height:2px}
+.chart .c.cur i{background:var(--gold)}
+.chart .c span{font-size:10px;color:var(--sub)}
+.chart .c em{white-space:nowrap;font-style:normal;font-size:10px;color:var(--deep);font-weight:700}
+.mnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.mnav button{background:#fff;border:2px solid #cfd8d2;border-radius:10px;width:40px;height:36px;font-weight:900}
+.mnav b{font-size:17px}
+table.list{width:100%;border-collapse:collapse;font-size:14px}
+table.list td{padding:9px 4px;border-top:1px solid var(--line);vertical-align:middle}
+table.list td.r{text-align:right}
+table.list tr:first-child td{border-top:0}
+/* シート（入力画面） */
+.sheet-bg{position:fixed;inset:0;background:rgba(6,40,26,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-top:3px solid var(--gold)}
+.sheet h3{margin:0 0 12px;font-size:18px}
+.f{margin-bottom:12px}
+.f label{display:block;font-size:12px;color:var(--sub);font-weight:700;margin-bottom:4px}
+.f input,.f select,.f textarea{width:100%;border:2px solid #cfd8d2;border-radius:10px;padding:10px;background:#fff}
+.f textarea{min-height:80px}
+.f.ck label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);font-weight:500}
+.f.ck input{width:20px;height:20px;accent-color:var(--deep)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:2px solid #cfd8d2;background:#fff;border-radius:10px;padding:8px 12px;font-weight:700;font-size:13px}
+.seg button.on{background:var(--deep);border-color:var(--deep);color:#fff}
+.calc{background:var(--cream);border:1px solid var(--gold2);border-radius:12px;padding:12px;font-size:14px;margin-bottom:12px}
+.calc b{color:var(--deep)}
+/* 合言葉 */
+.gate{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(160deg,var(--night),var(--deep));color:#fff;padding:24px;text-align:center}
+.gate img{width:110px;border-radius:24px;box-shadow:0 0 0 1px var(--gold)}
+.gate input{width:min(320px,90vw);border:1px solid var(--gold);background:rgba(255,255,255,.08);color:#fff;border-radius:12px;padding:12px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+const SB = "https://aevqdsozxiklyjfavvhf.supabase.co/rest/v1/", PK = "sb_publishable_3J-KuCCmuO_d7WLzQrsrTg_U3QiaF_I";
+const PRICE = 5000, GOAL = 500000, FEE_RATE = 0.0375, MIN_YEARS = 5, FREE_FIX = 2;
+const DEMO = /[?&]demo=1/.test(location.search);
+const ST = { prep: "準備中", live: "公開中", stopped: "公開停止", canceling: "解約予定", closed: "解約済み" };
+const PAYK = { monthly: "月額", extra: "追加作業", cancel_fee: "解約金", transfer_fee: "ドメイン移管", other: "その他" };
+const PAYS = { paid: "入金済み", failed: "失敗", waived: "免除" };
+const METH = { square: "Square（カード）", cash: "現金", transfer: "振込", other: "その他" };
+const SRC = { line: "LINE", phone: "電話", visit: "訪問", mail: "メール", other: "その他" };
+const RKIND = { small: "軽い修正（月2回に数える）", large: "大きな修正（見積もり）", extra: "追加作業（有料）" };
+const RST = { new: "受付", await_assign: "担当待ち", assigned: "作業中", await_ok: "見本の確認待ち", approved: "公開中…", done: "完了",
+  closed_self: "自分で対応", closed_reject: "断った", closed_stop: "やめた", merged: "まとめた", error: "止まった" };
+const EVT = { call: "📞 電話", visit: "🚶 訪問", line: "💬 LINE", mail: "✉️ メール", memo: "📝 メモ", trouble: "⚠️ トラブル", system: "⚙️ 記録" };
+const CLOSEOUT = [["square", "Squareの定期請求を止めた"], ["site", "ホームページを閉じた（または移管した）"], ["line", "LINEの紐付けを外した"], ["domain", "ドメインの扱いを決めた（移管／解約）"], ["money", "解約金・未払いの入金を確認した"]];
+
+/* ───── 小道具 ───── */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const yen = n => (n < 0 ? "-" : "") + "¥" + Math.abs(Math.round(n)).toLocaleString();
+const man = n => (n / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + "万円";
+const store = { get(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const pad = n => String(n).padStart(2, "0");
+const D = s => { if (!s) return null; const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
+const iso = d => d ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : "";
+const ymOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+const today = () => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); };
+const addM = (d, n) => { const r = new Date(d.getFullYear(), d.getMonth() + n, 1); const last = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate(); r.setDate(Math.min(d.getDate(), last)); return r; };
+const addD = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const diffD = (a, b) => Math.round((a - b) / 86400000);
+const ymAdd = (ym, n) => { const [y, m] = ym.split("-").map(Number); return ymOf(new Date(y, m - 1 + n, 1)); };
+const ymLabel = ym => { const [y, m] = ym.split("-").map(Number); return `${y}年${m}月`; };
+const jd = s => { const d = D(s); return d ? `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}` : "—"; };
+const jdt = s => { if (!s) return "—"; const d = new Date(s); return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const bizAdd = (d, n) => { let r = new Date(d); while (n > 0) { r = addD(r, 1); if (r.getDay() !== 0 && r.getDay() !== 6) n--; } return r; };
+const monthsBetween = (a, b) => { const [y1, m1] = a.split("-").map(Number), [y2, m2] = b.split("-").map(Number); return (y2 - y1) * 12 + (m2 - m1); };
+function toast(t) { const e = document.createElement("div"); e.className = "toast"; e.textContent = t; document.body.appendChild(e); setTimeout(() => e.remove(), 2600); }
+async function copy(t) { try { await navigator.clipboard.writeText(t); toast("コピーしました。LINEに貼り付けてください"); } catch (e) { prompt("コピーしてください", t); } }
+
+/* ───── データ ───── */
+let key = store.get("vmap_key");
+(() => { const m = location.hash.match(/vk=([A-Za-z0-9]+)/); if (m) { key = m[1]; store.set("vmap_key", key); history.replaceState(null, "", location.pathname + location.search); } })();
+let DB = { customers: [], payments: [], requests: [], events: [] };
+const TBL = { customers: "vcrm_customers", payments: "vcrm_payments", requests: "vcrm_requests", events: "vcrm_events" };
+async function api(path, opt = {}) {
+  const r = await fetch(SB + path, { ...opt, headers: { apikey: PK, "x-vmap-key": key, "Content-Type": "application/json", Prefer: "return=representation", ...(opt.headers || {}) } });
+  if (!r.ok) throw new Error(r.status + " " + (await r.text()).slice(0, 160));
+  const t = await r.text(); return t ? JSON.parse(t) : null;
+}
+async function loadAll() {
+  if (DEMO) { DB = demoData(); return; }
+  // 合言葉が違うと「0件」で返ってくるので、営業地図の印が読めるかで確かめる
+  const chk = await api("vmap_places?select=id&limit=1");
+  if (!chk || !chk.length) throw new Error("合言葉");
+  const [c, p, q, e] = await Promise.all([
+    api("vcrm_customers?select=*&order=created_at.asc"), api("vcrm_payments?select=*&order=month.asc"),
+    api("vcrm_requests?select=*&order=received_at.desc&limit=1000"), api("vcrm_events?select=*&order=at.desc&limit=2000")]);
+  DB = { customers: c, payments: p, requests: q, events: e };
+}
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2));
+async function save(kind, row) {           // row.id があれば更新、なければ追加
+  const list = DB[kind];
+  if (kind === "customers" || kind === "requests") row.updated_at = new Date().toISOString();
+  if (row.id && list.some(x => x.id === row.id)) {
+    const { id, ...rest } = row;
+    if (!DEMO) { const [r] = await api(`${TBL[kind]}?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(rest) }); Object.assign(row, r); }
+    const i = list.findIndex(x => x.id === id); list[i] = { ...list[i], ...row };
+    return list[i];
+  }
+  row.id = row.id || uid();
+  if (!DEMO) { const [r] = await api(TBL[kind], { method: "POST", body: JSON.stringify(row) }); Object.assign(row, r); }
+  list.push(row); return row;
+}
+async function del(kind, id) {
+  if (!DEMO) await api(`${TBL[kind]}?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+  DB[kind] = DB[kind].filter(x => x.id !== id);
+}
+const cust = id => DB.customers.find(c => c.id === id);
+function log(cid, type, text, resolved = true) { return save("events", { customer_id: cid, type, text, at: new Date().toISOString(), resolved }); }
+
+/* ───── 契約の計算（契約書の条文どおり） ───── */
+function contract(c) {
+  const T = today(), p = D(c.publish_date);
+  if (!p) return { started: false };
+  const end = addD(addM(p, MIN_YEARS * 12), -1);                    // 公開日から5年（4条1項）
+  const noticeBy = addM(end, -3);                                   // 満了3か月前までに申出がなければ継続（4条2項）
+  const after = T > end;                                            // 満了後＝期間の定めなし
+  const leftM = Math.max(0, monthsBetween(ymOf(T), ymOf(end)));
+  return { started: true, p, end, noticeBy, after, leftM, endYM: ymOf(end) };
+}
+function cancelPlan(c, noticeStr) {                                 // 解約の申出日 → 解約日・解約金（7条）
+  const k = contract(c), n = D(noticeStr) || today();
+  const cdate = addM(n, 1);                                         // 1か月前までに通知
+  if (!k.started) return { cdate, fee: 0, months: 0, note: "公開前のため解約金の計算対象外（扱いは要相談）" };
+  if (cdate > k.end) return { cdate, fee: 0, months: 0, note: "満了後のため解約金なし（4条3項）" };
+  const months = Math.max(0, monthsBetween(ymOf(cdate), k.endYM));  // 解約月の翌月〜満了月
+  return { cdate, fee: months * (c.monthly || PRICE), months, due: addD(today(), 30), note: `解約月の翌月〜満了月（${ymLabel(k.endYM)}）の${months}か月分（7条2項）` };
+}
+function dueMonths(c) {                                             // 月額が発生した（決済日を過ぎた）月の一覧
+  const k = contract(c); if (!k.started) return [];
+  const T = today(), out = [], startYM = ymOf(k.p);
+  let lastYM = ymOf(T);
+  if (c.cancel_date) { const cd = D(c.cancel_date); if (ymOf(cd) < lastYM) lastYM = ymOf(cd); }
+  for (let ym = startYM; ym <= lastYM; ym = ymAdd(ym, 1)) {
+    const [y, m] = ym.split("-").map(Number);
+    const due = ym === startYM ? k.p : new Date(y, m - 1, Math.min(c.pay_day || 27, new Date(y, m, 0).getDate()));
+    out.push({ ym, due, passed: due <= T });
+  }
+  return out;
+}
+function payOf(cid, ym) { return DB.payments.find(p => p.customer_id === cid && p.month === ym && p.kind === "monthly"); }
+function money(c) {                                                 // 未払いの状態
+  const T = today(), rows = dueMonths(c).filter(r => r.passed);
+  const unpaid = [], pending = [];
+  for (const r of rows) {
+    const p = payOf(c.id, r.ym);
+    if (p && (p.status === "paid" || p.status === "waived")) continue;
+    if (p && p.status === "failed") unpaid.push(r);
+    else if (diffD(T, r.due) >= 3) unpaid.push(r); else pending.push(r);  // 決済日から3日たっても確認なし＝未入金扱い
+  }
+  const late = unpaid.reduce((s, r) => s + (c.monthly || PRICE) * 0.146 * Math.max(0, diffD(T, r.due) - 1) / 365, 0);
+  return { unpaid, pending, owed: unpaid.length * (c.monthly || PRICE), late };
+}
+function fixCount(cid, ym) {
+  return DB.requests.filter(r => r.customer_id === cid && r.counted !== false && (r.kind || "small") === "small" && !["merged", "closed_reject", "closed_stop"].includes(r.status) && ymOf(new Date(r.received_at)) === ym).length;
+}
+function reqDue(r) { return bizAdd(new Date(r.received_at), 5); }   // 5営業日（5条3項・祝日は数えていない）
+const reqOpen = r => !["done", "closed_self", "closed_reject", "closed_stop", "merged"].includes(r.status);
+
+/* ───── 今日やること（自動） ───── */
+function todos() {
+  const T = today(), out = [];
+  const add = (lv, ic, title, sub, go) => out.push({ lv, ic, title, sub, go });
+  for (const c of DB.customers) {
+    if (c.status === "closed") {
+      const left = CLOSEOUT.filter(([k]) => !(c.closeout || {})[k]);
+      if (left.length) add(1, "🧹", `${c.shop_name}：解約の後始末が残っています`, left.map(x => x[1]).join("／"), c.id);
+      continue;
+    }
+    const k = contract(c), m = money(c);
+    if (m.unpaid.length >= 2) add(3, "⛔", `${c.shop_name}：未入金 ${m.unpaid.length}か月分（${yen(m.owed)}）`, "契約を解除できる状態です（8条1項）。まず連絡を", c.id);
+    else if (m.unpaid.length === 1) add(3, "💳", `${c.shop_name}：${ymLabel(m.unpaid[0].ym)}分が未入金`, "カードの確認をお願いする（LINE文はカルテにあります）。1か月分以上で公開停止できます（8条2項）", c.id);
+    if (m.pending.length) add(2, "🔎", `${c.shop_name}：${ymLabel(m.pending[0].ym)}分の入金を確認`, "Squareで決済できたか見て「入金済み」に", c.id);
+    if (c.status === "prep") {
+      if (!c.card_ok && k.started && diffD(k.p, T) <= 7) add(3, "💳", `${c.shop_name}：カード未登録のまま公開日が近い`, `公開日 ${jd(c.publish_date)}。初回は公開日に決済（6条）`, c.id);
+      if (!c.signed) add(2, "✍️", `${c.shop_name}：契約書の署名がまだ`, "署名をもらってから公開する", c.id);
+      if (!c.publish_date) add(1, "📅", `${c.shop_name}：公開日が未定`, "公開日を入れると満了日・決済日が自動で出ます", c.id);
+      if (k.started && T >= k.p) add(2, "🚀", `${c.shop_name}：公開日を過ぎています`, "公開したら状態を「公開中」に", c.id);
+    }
+    if (c.waiting_material && c.material_since && diffD(T, D(c.material_since)) >= 7) add(2, "📦", `${c.shop_name}：素材待ちが${diffD(T, D(c.material_since))}日`, c.material_note || "写真・ロゴなどの催促を", c.id);
+    if (k.started && !k.after && c.status !== "canceling") {
+      const d = diffD(k.noticeBy, T);
+      if (d >= 0 && d <= 30) add(2, "⏳", `${c.shop_name}：満了の申出締切まで${d}日`, `満了 ${jd(iso(k.end))}。何もなければ自動で継続（4条2項）。継続の確認を`, c.id);
+    }
+    if (c.status === "canceling" && c.cancel_date) {
+      const d = diffD(D(c.cancel_date), T);
+      if (d <= 14) add(2, "🚪", `${c.shop_name}：解約日まで${Math.max(0, d)}日`, "解約金の入金と後始末の準備", c.id);
+      const plan = cancelPlan(c, c.cancel_notice);
+      if (plan.fee > 0 && !DB.payments.some(p => p.customer_id === c.id && p.kind === "cancel_fee" && p.status === "paid")) add(2, "💴", `${c.shop_name}：解約金 ${yen(plan.fee)} が未入金`, "請求から30日以内に一括（7条2項）", c.id);
+    }
+    if (c.domain_renew) { const d = diffD(D(c.domain_renew), T); if (d <= 30) add(d < 0 ? 3 : 2, "🌐", `${c.shop_name}：ドメイン更新${d < 0 ? "日を過ぎています" : "まで" + d + "日"}`, c.domain || "", c.id); }
+    if (fixCount(c.id, ymOf(T)) > FREE_FIX) add(1, "✂️", `${c.shop_name}：今月の修正が${fixCount(c.id, ymOf(T))}回（無料は2回）`, "3回目以降は追加料金の相談（5条2項）", c.id);
+  }
+  for (const r of DB.requests.filter(reqOpen)) {
+    const c = cust(r.customer_id), nm = c ? c.shop_name : (r.line_name || "未登録のお客さん");
+    if (!r.customer_id) { add(2, "🔗", `${nm}：どのお客さんか未登録のLINE依頼`, "「修正」タブで紐付け", "req"); continue; }
+    if (r.status === "await_assign") add(3, "💬", `${nm}：LINE依頼の担当を決める`, "スマホのLINEに確認が届いています", c ? c.id : "req");
+    if (r.status === "await_ok") add(3, "👀", `${nm}：見本の確認待ち`, "LINEで「OK・公開して返信」か「直す」", c ? c.id : "req");
+    const d = diffD(reqDue(r), T);
+    if (d <= 1) add(d < 0 ? 3 : 2, "⏰", `${nm}：修正の期限${d < 0 ? "を" + (-d) + "日過ぎています" : d === 0 ? "は今日" : "は明日"}`, (r.summary || r.body || "").slice(0, 60), c ? c.id : "req");
+  }
+  for (const e of DB.events.filter(e => e.type === "trouble" && e.resolved === false)) { const c = cust(e.customer_id); add(3, "⚠️", `${c ? c.shop_name : ""}：未解決のトラブル`, (e.text || "").slice(0, 60), e.customer_id); }
+  return out.sort((a, b) => b.lv - a.lv);
+}
+
+/* ───── 売上 ───── */
+function monthTotals(ym) {
+  const ps = DB.payments.filter(p => p.month === ym && p.status === "paid");
+  const sum = k => ps.filter(p => p.kind === k).reduce((s, p) => s + p.amount, 0);
+  const total = ps.reduce((s, p) => s + p.amount, 0);
+  const sq = ps.filter(p => (p.method || "square") === "square").reduce((s, p) => s + p.amount, 0);
+  return { total, monthly: sum("monthly"), extra: sum("extra"), cancel: sum("cancel_fee") + sum("transfer_fee") + sum("other"), fee: Math.round(sq * FEE_RATE), net: total - Math.round(sq * FEE_RATE) };
+}
+const liveCount = () => DB.customers.filter(c => c.status === "live" || c.status === "stopped" || c.status === "canceling").length;
+
+/* ───── 画面 ───── */
+let tab = store.get("vcrm_tab") || "home", openId = null, filter = "all", q = "", moneyYM = ymOf(today()), reqFilter = "open";
+const ICONS = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  cust: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-2-5-4-5.5"/></svg>',
+  money: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 6V4h12v2"/></svg>',
+  req: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg>'
+};
+function render() {
+  store.set("vcrm_tab", tab);
+  const td = todos(), openReq = DB.requests.filter(r => reqOpen(r)).length;
+  let body = openId ? viewKarte(cust(openId)) : { home: viewHome, cust: viewList, money: viewMoney, req: viewReq }[tab](td);
+  $("#app").innerHTML = `
+  <header><div class="hd"><img src="icon-96.png" alt="VISION">
+    <div><div class="t1 en">VISION</div><div class="t2">お客さんカルテ</div></div><div class="sp"></div>
+    ${DEMO ? '<span class="demo">見本データ</span>' : ""}</div></header>
+  <main>${body}</main>
+  ${(!openId && tab === "cust") ? '<button class="fab" data-act="newCust">＋ お客さん</button>' : ""}
+  <nav><div class="in">
+    ${[["home", "ホーム", td.filter(t => t.lv >= 3).length], ["cust", "お客さん", 0], ["money", "お金", 0], ["req", "修正", openReq]].map(([k, l, n]) =>
+      `<button class="${tab === k && !openId ? "on" : ""}" data-tab="${k}">${ICONS[k === "cust" ? "cust" : k]}${l}${n ? `<span class="badge">${n}</span>` : ""}</button>`).join("")}
+  </div></nav>`;
+  window.scrollTo(0, openId ? 0 : (window.__keep || 0)); window.__keep = 0;
+}
+
+function viewHome(td) {
+  const ym = ymOf(today()), mt = monthTotals(ym), live = liveCount(), mrr = live * PRICE;
+  const need = Math.max(0, Math.ceil((GOAL - mrr) / PRICE)), pct = Math.min(100, mrr / GOAL * 100);
+  const unpaidSum = DB.customers.reduce((s, c) => s + (c.status === "closed" ? 0 : money(c).owed), 0);
+  const fixes = DB.requests.filter(r => ymOf(new Date(r.received_at)) === ym && r.customer_id).length;
+  return `
+  <div class="hero">
+    <div class="lb">毎月の売上（公開中 ${live}件 × 5,000円）</div>
+    <div class="big num">${yen(mrr)}<small>／月</small></div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="row small"><span class="grow" style="color:var(--gold2)">目標 月50万円まで あと <b style="color:#fff;font-size:15px">${need}件</b></span><span class="num">${pct.toFixed(0)}%</span></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b class="num">${yen(mt.total)}</b><span>${new Date().getMonth() + 1}月の入金</span></div>
+    <div class="kpi ${unpaidSum ? "bad" : ""}"><b class="num">${yen(unpaidSum)}</b><span>未入金</span></div>
+    <div class="kpi"><b class="num">${fixes}件</b><span>今月の修正依頼</span></div>
+  </div>
+  <h2>今日やること（${td.length}）</h2>
+  ${td.length ? td.map(t => `<div class="todo ${t.lv >= 3 ? "hi" : t.lv <= 1 ? "lo" : ""}" data-go="${esc(t.go)}"><div class="ic">${t.ic}</div><div class="grow"><b>${esc(t.title)}</b><div class="muted">${esc(t.sub)}</div></div></div>`).join("")
+    : `<div class="card empty">✨ 今日やることはありません</div>`}
+  ${DB.customers.length ? "" : `<div class="card"><b>はじめに</b><div class="muted" style="margin-top:6px">契約が決まったら「お客さん」タブの「＋ お客さん」から登録します。どんな画面になるかは <a href="?demo=1">見本データで見る</a>。</div></div>`}`;
+}
+
+function custStatus(c) {
+  const m = money(c), T = today(), ym = ymOf(T), k = contract(c);
+  const tags = [];
+  if (c.status !== "closed") {
+    if (m.unpaid.length) tags.push(`<span class="bad">未入金 ${m.unpaid.length}か月</span>`);
+    else if (k.started && c.status !== "prep") { const p = payOf(c.id, ym); const due = dueMonths(c).find(r => r.ym === ym); tags.push(p && p.status === "paid" ? '<span class="good">今月 入金済み</span>' : due && due.passed ? '<span class="bad">今月 未確認</span>' : `<span>今月 ${c.pay_day || 27}日決済</span>`); }
+    const n = fixCount(c.id, ym); if (c.status !== "prep") tags.push(`<span class="${n > FREE_FIX ? "bad" : ""}">修正 ${n}/${FREE_FIX}</span>`);
+    if (c.status === "canceling" && c.cancel_date) tags.push(`<span class="bad">解約日 ${jd(c.cancel_date)}</span>`);
+    else if (k.started) tags.push(`<span>${k.after ? "満了後（いつでも解約可）" : "満了まで " + Math.floor(k.leftM / 12) + "年" + (k.leftM % 12) + "か月"}</span>`);
+    if (c.waiting_material) tags.push('<span class="bad">素材待ち</span>');
+  }
+  return tags.join("");
+}
+const needsCare = c => c.status !== "closed" && (money(c).unpaid.length || c.status === "stopped" || todos().some(t => t.go === c.id && t.lv >= 3));
+function viewList() {
+  const F = { all: "すべて", care: "要注意", prep: "準備中", live: "公開中", canceling: "解約予定", closed: "解約済み" };
+  let list = DB.customers.filter(c => filter === "all" ? c.status !== "closed" : filter === "care" ? needsCare(c) : c.status === filter);
+  if (q) list = list.filter(c => [c.shop_name, c.owner_name, c.kind, c.phone, c.address, c.slug].join(" ").includes(q));
+  const cnt = k => k === "all" ? DB.customers.filter(c => c.status !== "closed").length : k === "care" ? DB.customers.filter(needsCare).length : DB.customers.filter(c => c.status === k).length;
+  return `<div class="filters">${Object.entries(F).map(([k, l]) => `<button class="${filter === k ? "on" : ""}" data-filter="${k}">${l} ${cnt(k)}</button>`).join("")}</div>
+  <input class="search" id="q" placeholder="🔍 店名・代表者・電話で探す" value="${esc(q)}">
+  ${list.length ? list.map(c => `<div class="card cust" data-open="${c.id}"><div class="row"><div class="grow"><div class="nm">${esc(c.shop_name)}</div><div class="muted">${esc(c.kind || "")}${c.owner_name ? "・" + esc(c.owner_name) + " 様" : ""}</div></div><span class="chip c-${c.status}">${ST[c.status]}</span></div><div class="meta">${custStatus(c)}</div></div>`).join("")
+    : `<div class="card empty">${DB.customers.length ? "当てはまるお客さんはいません" : "まだお客さんがいません。<br>契約が決まったら右下の「＋ お客さん」から。"}</div>`}`;
+}
+
+function viewKarte(c) {
+  if (!c) { openId = null; return viewList(); }
+  const T = today(), ym = ymOf(T), k = contract(c), m = money(c);
+  const n = fixCount(c.id, ym), reqs = DB.requests.filter(r => r.customer_id === c.id).sort((a, b) => b.received_at.localeCompare(a.received_at));
+  const evs = DB.events.filter(e => e.customer_id === c.id).sort((a, b) => b.at.localeCompare(a.at));
+  const pays = DB.payments.filter(p => p.customer_id === c.id && p.kind !== "monthly").sort((a, b) => b.month.localeCompare(a.month));
+  const alerts = [];
+  if (m.unpaid.length >= 2) alerts.push(["red", `⛔ 未入金 ${m.unpaid.length}か月分（${yen(m.owed)}）。催告のうえ契約を解除できます（8条1項）。${k.started && !k.after ? "期間中の解除は解約金も一括（" + yen(cancelPlan(c, iso(T)).fee) + "）。" : ""}遅延損害金の目安 ${yen(m.late)}（年14.6%）`]);
+  else if (m.unpaid.length === 1) alerts.push(["red", `💳 ${ymLabel(m.unpaid[0].ym)}分が未入金。支払いが確認できるまで公開を止められます（8条2項）。遅延損害金の目安 ${yen(m.late)}`]);
+  if (m.pending.length) alerts.push(["amber", `🔎 ${ymLabel(m.pending[0].ym)}分：決済日を過ぎました。Squareで入金を確認してください`]);
+  if (c.status === "prep" && !c.card_ok) alerts.push(["amber", "💳 カード（Square）が未登録です。公開日に初回の決済があります（6条）"]);
+  if (c.status === "prep" && !c.signed) alerts.push(["amber", "✍️ 契約書の署名がまだです"]);
+  if (c.waiting_material) alerts.push(["blue", `📦 素材待ち${c.material_since ? "（" + diffD(T, D(c.material_since)) + "日目）" : ""}：${esc(c.material_note || "")}`]);
+  if (n > FREE_FIX) alerts.push(["amber", `✂️ 今月の修正が${n}回。無料は月2回まで、3回目からは追加料金の相談（5条2項）`]);
+  if (k.started && k.after) alerts.push(["ok", "🎉 5年の最低利用期間が終わりました。今は期間の定めのない契約（1か月前の通知でいつでも解約・解約金なし）"]);
+  const months = dueMonths(c);
+  // 入金の12マス：直近12か月分（先の月は薄く）
+  let grid = "";
+  if (k.started) {
+    const lastYM = months.length ? months[months.length - 1].ym : ym;
+    const first = ymAdd(lastYM, -10) < ymOf(k.p) ? ymOf(k.p) : ymAdd(lastYM, -10);
+    for (let i = 0, y = first; i < 12; i++, y = ymAdd(y, 1)) {
+      const r = months.find(x => x.ym === y), p = payOf(c.id, y);
+      let cls = "future", st = "予定";
+      if (r && p) { cls = p.status; st = { paid: "済み", failed: "失敗", waived: "免除" }[p.status]; }
+      else if (r && r.passed) { const un = m.unpaid.some(u => u.ym === y); cls = un ? "failed" : "pending"; st = un ? "未入金" : "確認"; }
+      else if (!r && y > k.endYM && !k.after) { cls = "future"; st = "—"; }
+      grid += `<div class="mo ${cls} ${y === ym ? "now" : ""}" data-pay="${y}"><b>${Number(y.slice(5))}月</b>${st}</div>`;
+    }
+  }
+  const lineTpl = m.unpaid.length ? `${c.owner_name || c.shop_name}様\n\nいつもありがとうございます。\nVISIONの下田です。\n\n${ymLabel(m.unpaid[0].ym)}分のホームページ月額（5,000円）の\nカード決済ができていないようです。\n\nカードの有効期限や\nご利用枠をご確認いただけますでしょうか。\n\nカードを変更される場合は、\n新しい登録用のリンクをお送りします。\n\nお手数をおかけしますが、\nよろしくお願いいたします。\n\n合同会社VISION 下田` : "";
+  return `<button class="back" data-back>← お客さん一覧</button>
+  <div class="kh"><div class="row"><div class="grow"><div class="sub">${esc(c.kind || "")}</div><div class="nm">${esc(c.shop_name)}</div><div class="sub">${c.owner_name ? esc(c.owner_name) + " 様" : ""}</div></div><span class="chip c-${c.status}">${ST[c.status]}</span></div>
+    <div class="acts">${c.phone ? `<a href="tel:${esc(c.phone)}">📞 電話</a>` : ""}${c.site_url ? `<a href="${esc(c.site_url)}" target="_blank" rel="noopener">🌐 HP</a>` : ""}${c.address ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">🧭 ナビ</a>` : ""}<button data-act="editCust">✏️ 編集</button><button data-act="status">🔁 状態</button></div></div>
+  <div style="margin-top:10px">${alerts.map(([t, s]) => `<div class="alert ${t}">${s}</div>`).join("")}${lineTpl ? `<button class="btn sm ghost" data-copy="${esc(lineTpl)}" style="margin-bottom:8px">📋 カード確認のお願い（LINE文）をコピー</button>` : ""}</div>
+
+  <h2>契約</h2><div class="card"><dl class="kv">
+    <dt>契約日</dt><dd>${jd(c.contract_date)} ${c.signed ? "✅署名済み" : "<span style='color:var(--red)'>署名まだ</span>"}</dd>
+    <dt>公開日</dt><dd>${jd(c.publish_date)}</dd>
+    <dt>満了日</dt><dd>${k.started ? jd(iso(k.end)) + (k.after ? "（満了済み）" : `（あと${Math.floor(k.leftM / 12)}年${k.leftM % 12}か月）`) : "公開日が決まると自動で出ます"}</dd>
+    <dt>継続の申出締切</dt><dd>${k.started ? jd(iso(k.noticeBy)) + "（満了3か月前）" : "—"}</dd>
+    <dt>月額</dt><dd>${yen(c.monthly || PRICE)}・毎月${c.pay_day || 27}日 ${c.card_ok ? "✅カード登録済み" : "<span style='color:var(--red)'>カード未登録</span>"}</dd>
+    <dt>今やめたら</dt><dd>${c.status === "closed" ? "—" : (p => p.fee ? `解約金 <b>${yen(p.fee)}</b>（${p.months}か月分）` : p.note)(cancelPlan(c, iso(T)))}</dd>
+    ${c.contract_file ? `<dt>契約書</dt><dd>${esc(c.contract_file)}</dd>` : ""}
+  </dl></div>
+
+  <h2>入金</h2><div class="card">
+    ${k.started ? `<div class="months">${grid}</div><div class="muted small" style="margin-top:8px">マスを押すと「入金済み・失敗・免除」をつけられます。初回は公開日、2か月目からは毎月${c.pay_day || 27}日。</div>` : '<div class="muted">公開日が決まると、ここに毎月の入金表が出ます。</div>'}
+    ${pays.length ? `<table class="list" style="margin-top:8px">${pays.map(p => `<tr data-payrow="${p.id}"><td>${ymLabel(p.month)}</td><td>${PAYK[p.kind]}${p.memo ? "<div class='muted small'>" + esc(p.memo) + "</div>" : ""}</td><td class="r num">${yen(p.amount)}</td><td class="r">${PAYS[p.status]}</td></tr>`).join("")}</table>` : ""}
+    <div class="btns" style="margin-top:10px"><button class="btn sm ghost" data-act="addPay">＋ 月額以外の入金（追加作業・解約金など）</button></div>
+  </div>
+
+  <h2>修正依頼</h2><div class="card">
+    <div class="row"><div class="counter ${n > FREE_FIX ? "over" : ""}"><b class="num">${n}</b><span class="muted">/ ${FREE_FIX}回</span></div><div class="dots">${[...Array(Math.max(FREE_FIX, n))].map((_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</div><div class="grow"></div><button class="btn sm" data-act="addReq">＋ 記録</button></div><div class="muted small">${new Date().getMonth() + 1}月の無料修正（毎月リセット・繰り越しなし）</div>
+    <div style="margin-top:6px">${reqs.length ? reqs.slice(0, 30).map(r => reqItem(r, false)).join("") : '<div class="muted">まだありません。LINEで来た依頼は自動でここに入ります。</div>'}</div>
+  </div>
+
+  <h2>連絡・出来事</h2><div class="card">
+    <div class="btns" style="margin-bottom:10px"><button class="btn sm" data-act="addEv">＋ 記録する</button></div>
+    ${evs.length ? `<div class="tl">${evs.slice(0, 50).map(e => `<div class="ev ${e.type === "trouble" ? "trouble" : ""}" data-ev="${e.id}"><div class="muted small">${jdt(e.at)}　${EVT[e.type] || e.type}${e.type === "trouble" ? (e.resolved === false ? " <b style='color:var(--red)'>未解決</b>" : " 解決済み") : ""}</div><div>${esc(e.text).replace(/\n/g, "<br>")}</div></div>`).join("")}</div>` : '<div class="muted">まだありません</div>'}
+  </div>
+
+  <h2>サイト・ドメイン・LINE</h2><div class="card"><dl class="kv">
+    <dt>HP</dt><dd>${c.site_url ? `<a href="${esc(c.site_url)}" target="_blank" rel="noopener">${esc(c.site_url)}</a>` : "—"}</dd>
+    <dt>お店フォルダ</dt><dd>${esc(c.slug || "—")}</dd>
+    <dt>ドメイン</dt><dd>${esc(c.domain || "共有（pages.dev）")}${c.domain_renew ? `<div class="muted small">更新日 ${jd(c.domain_renew)}</div>` : ""}</dd>
+    <dt>Googleマップ</dt><dd>${c.gbp ? "✅ つないだ" : "まだ"}</dd>
+    <dt>LINE</dt><dd>${c.line_user ? "✅ " + esc(c.line_name || "紐付け済み") : "未紐付け（LINE依頼を紐付けると自動で）"}</dd>
+  </dl></div>
+
+  ${c.status === "canceling" || c.status === "closed" ? `<h2>解約</h2><div class="card">
+    ${(p => `<div class="calc">申出日 <b>${jd(c.cancel_notice)}</b>／解約日 <b>${jd(c.cancel_date)}</b><br>${p.fee ? `解約金 <b>${yen(p.fee)}</b>（${p.note}）<br>請求から30日以内に一括` : esc(p.note)}${c.cancel_reason ? "<br>理由：" + esc(c.cancel_reason) : ""}</div>`)(cancelPlan(c, c.cancel_notice))}
+    <b>後始末のチェック</b>${CLOSEOUT.map(([kk, l]) => `<label class="check"><input type="checkbox" data-close="${kk}" ${(c.closeout || {})[kk] ? "checked" : ""}>${l}</label>`).join("")}
+    ${c.domain ? `<div class="muted small" style="margin-top:8px">ドメイン移管を希望されたら：未払いがないこと（今 ${m.owed ? "<b style='color:var(--red)'>未払い " + yen(m.owed) + "あり→移管不可</b>" : "未払いなし"}）＋手数料10,000円と実費（10条）。移すのはドメインだけ。</div>` : ""}
+  </div>` : ""}
+  ${c.memo ? `<h2>メモ</h2><div class="card">${esc(c.memo).replace(/\n/g, "<br>")}</div>` : ""}
+  <div class="btns" style="margin:20px 0">${c.status !== "canceling" && c.status !== "closed" ? '<button class="btn ghost" data-act="cancel">🚪 解約の申し出を受けた</button>' : ""}</div>`;
+}
+function reqItem(r, withShop) {
+  const c = cust(r.customer_id), d = reqDue(r), open = reqOpen(r), late = open && diffD(d, today()) < 0;
+  return `<div class="req" data-req="${r.id}"><div class="row"><div class="grow">
+    ${withShop ? `<b>${esc(c ? c.shop_name : (r.line_name || "未登録のお客さん"))}</b> ` : ""}<span class="chip ${open ? (late ? "c-warn" : "c-canceling") : "c-live"}">${RST[r.status] || r.status}</span>
+    <span class="muted small">${SRC[r.source] || ""}・${jdt(r.received_at)}${(r.kind || "small") !== "small" ? "・" + (r.kind === "large" ? "大きな修正" : "追加作業") : r.counted === false ? "・数えない" : ""}</span></div></div>
+    <div style="margin-top:4px">${esc(r.summary || r.body || "").slice(0, 140)}</div>
+    ${open ? `<div class="muted small">期限 ${jd(iso(d))}（受付から5営業日）${late ? " <b style='color:var(--red)'>過ぎています</b>" : ""}</div>` : ""}</div>`;
+}
+
+function viewMoney() {
+  const mt = monthTotals(moneyYM), cur = ymOf(today());
+  // その月に月額が発生するお客さん
+  const rows = DB.customers.map(c => ({ c, r: dueMonths(c).find(x => x.ym === moneyYM) })).filter(x => x.r);
+  const paid = rows.filter(x => { const p = payOf(x.c.id, moneyYM); return p && p.status === "paid"; }).length;
+  const waiting = rows.filter(x => !payOf(x.c.id, moneyYM));
+  const bars = [...Array(12)].map((_, i) => { const y = ymAdd(moneyYM, i - 11); return { y, v: monthTotals(y).total }; });
+  const mx = Math.max(10000, ...bars.map(b => b.v));
+  const extras = DB.payments.filter(p => p.month === moneyYM && p.kind !== "monthly");
+  return `<div class="mnav"><button data-ym="-1">‹</button><b>${ymLabel(moneyYM)}</b><button data-ym="1" ${moneyYM >= cur ? "disabled" : ""}>›</button></div>
+  <div class="hero"><div class="lb">入金合計</div><div class="big num">${yen(mt.total)}</div>
+    <div class="small" style="margin-top:6px;color:var(--gold2)">月額 ${yen(mt.monthly)}・追加作業 ${yen(mt.extra)}・解約金など ${yen(mt.cancel)}</div>
+    <div class="small" style="margin-top:2px;color:var(--gold2)">Square手数料（3.75%）${yen(mt.fee)} を引いた手取り <b style="color:#fff">${yen(mt.net)}</b></div></div>
+  <h2>この月の月額（${paid}/${rows.length}件 入金済み）</h2>
+  <div class="card">${rows.length ? `<table class="list">${rows.map(({ c, r }) => { const p = payOf(c.id, moneyYM);
+      const st = p ? PAYS[p.status] : r.passed ? (money(c).unpaid.some(u => u.ym === moneyYM) ? "未入金" : "確認待ち") : jd(iso(r.due)) + " 決済";
+      const col = p ? (p.status === "paid" ? "var(--ok)" : p.status === "failed" ? "var(--red)" : "var(--sub)") : r.passed ? "var(--red)" : "var(--sub)";
+      return `<tr data-open="${c.id}"><td>${esc(c.shop_name)}</td><td class="r num">${yen(c.monthly || PRICE)}</td><td class="r" style="color:${col};font-weight:700">${st}</td></tr>`; }).join("")}</table>
+    ${waiting.some(x => x.r.passed) ? `<button class="btn gold" style="width:100%;margin-top:10px" data-act="bulkPaid">✅ 決済日を過ぎた${waiting.filter(x => x.r.passed).length}件をまとめて「入金済み」に</button><div class="muted small" style="margin-top:6px">Squareの画面で全員の決済成功を確かめてから押してください。失敗した人だけ先に「失敗」をつけておくと除外されます。</div>` : ""}`
+    : '<div class="muted">この月に月額が発生するお客さんはいません</div>'}</div>
+  ${extras.length ? `<h2>月額以外</h2><div class="card"><table class="list">${extras.map(p => `<tr data-open="${p.customer_id}"><td>${esc((cust(p.customer_id) || {}).shop_name || "")}</td><td>${PAYK[p.kind]}</td><td class="r num">${yen(p.amount)}</td><td class="r">${PAYS[p.status]}</td></tr>`).join("")}</table></div>` : ""}
+  <h2>12か月の入金</h2><div class="card"><div class="chart">${bars.map(b => `<div class="c ${b.y === moneyYM ? "cur" : ""}"><em>${b.v ? man(b.v).replace("万円", "万") : ""}</em><i style="height:${b.v / mx * 100}%"></i><span>${Number(b.y.slice(5))}月</span></div>`).join("")}</div></div>
+  <h2>事業の数字</h2><div class="card"><dl class="kv">
+    <dt>公開中</dt><dd>${liveCount()}件（毎月 ${yen(liveCount() * PRICE)}）</dd>
+    <dt>準備中</dt><dd>${DB.customers.filter(c => c.status === "prep").length}件</dd>
+    <dt>解約済み</dt><dd>${DB.customers.filter(c => c.status === "closed").length}件</dd>
+    <dt>累計の入金</dt><dd>${yen(DB.payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0))}</dd>
+    <dt>未入金の合計</dt><dd>${yen(DB.customers.reduce((s, c) => s + (c.status === "closed" ? 0 : money(c).owed), 0))}</dd>
+  </dl></div>`;
+}
+
+function viewReq() {
+  const F = { open: "対応中", unlinked: "紐付けまだ", done: "終わった", all: "すべて" };
+  let list = DB.requests.slice().sort((a, b) => b.received_at.localeCompare(a.received_at));
+  list = list.filter(r => reqFilter === "open" ? reqOpen(r) : reqFilter === "done" ? !reqOpen(r) : reqFilter === "unlinked" ? !r.customer_id : true);
+  return `<div class="filters">${Object.entries(F).map(([k, l]) => `<button class="${reqFilter === k ? "on" : ""}" data-rfilter="${k}">${l}</button>`).join("")}</div>
+  <div class="muted small" style="margin:10px 2px">LINEで来た依頼はPCのLINE係が自動でここへ入れます（担当決め・見本のOKはスマホのLINEで）。電話や訪問で頼まれた分はお客さんのカルテから記録。</div>
+  <div class="card">${list.length ? list.map(r => reqItem(r, true)).join("") : '<div class="empty">ありません</div>'}</div>`;
+}
+
+/* ───── 入力シート ───── */
+function sheet(title, html, onSave, opts = {}) {
+  const bg = document.createElement("div"); bg.className = "sheet-bg";
+  bg.innerHTML = `<div class="sheet"><h3>${title}</h3><form>${html}<div class="btns" style="margin-top:6px"><button class="btn" type="submit" style="flex:1">${opts.ok || "保存"}</button><button class="btn ghost" type="button" data-x>やめる</button>${opts.del ? '<button class="btn red" type="button" data-del>消す</button>' : ""}</div></form></div>`;
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.addEventListener("click", e => { if (e.target === bg || e.target.closest("[data-x]")) close(); });
+  bg.querySelectorAll(".seg").forEach(s => s.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; e.preventDefault(); s.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); s.dataset.v = b.dataset.v; s.dispatchEvent(new Event("change", { bubbles: true })); }));
+  if (opts.del) bg.querySelector("[data-del]").onclick = async () => { if (!confirm("消してもいいですか？（元に戻せません）")) return; try { await opts.del(); close(); render(); } catch (e) { toast("消せませんでした " + e.message); } };
+  const form = bg.querySelector("form");
+  if (opts.onChange) { form.addEventListener("input", () => opts.onChange(form)); form.addEventListener("change", () => opts.onChange(form)); opts.onChange(form); }
+  form.onsubmit = async e => {
+    e.preventDefault();
+    const v = {}; form.querySelectorAll("[name]").forEach(i => v[i.name] = i.type === "checkbox" ? i.checked : i.value.trim());
+    form.querySelectorAll(".seg[data-name]").forEach(s => v[s.dataset.name] = s.dataset.v);
+    const btn = form.querySelector("[type=submit]"); btn.disabled = true;
+    try { const r = await onSave(v); if (r === false) { btn.disabled = false; return; } close(); render(); } catch (err) { btn.disabled = false; toast("保存できませんでした " + err.message); }
+  };
+}
+const fi = (name, label, val = "", type = "text", ph = "") => `<div class="f"><label>${label}</label><input name="${name}" type="${type}" value="${esc(val ?? "")}" placeholder="${esc(ph)}"></div>`;
+const fck = (name, label, val) => `<div class="f ck"><label><input name="${name}" type="checkbox" ${val ? "checked" : ""}>${label}</label></div>`;
+const fta = (name, label, val = "", ph = "") => `<div class="f"><label>${label}</label><textarea name="${name}" placeholder="${esc(ph)}">${esc(val ?? "")}</textarea></div>`;
+const fsel = (name, label, obj, val) => `<div class="f"><label>${label}</label><select name="${name}">${Object.entries(obj).map(([k, l]) => `<option value="${k}" ${k === val ? "selected" : ""}>${l}</option>`).join("")}</select></div>`;
+const fseg = (name, label, obj, val) => `<div class="f"><label>${label}</label><div class="seg" data-name="${name}" data-v="${esc(val)}">${Object.entries(obj).map(([k, l]) => `<button data-v="${k}" class="${k === val ? "on" : ""}">${l}</button>`).join("")}</div></div>`;
+const nul = v => v === "" ? null : v;
+
+function editCustomer(c) {
+  const isNew = !c; c = c || { status: "prep", monthly: PRICE, pay_day: 27, contract_date: iso(today()) };
+  sheet(isNew ? "お客さんを追加" : "お客さんの情報", `
+    ${fi("shop_name", "店名 *", c.shop_name)}
+    <div class="grid2">${fi("kind", "業種", c.kind, "text", "美容室・飲食など")}${fi("owner_name", "代表者", c.owner_name)}</div>
+    <div class="grid2">${fi("phone", "電話", c.phone, "tel")}${fi("email", "メール", c.email, "email")}</div>
+    ${fi("address", "住所", c.address)}
+    <h2>契約</h2>
+    <div class="grid2">${fi("contract_date", "契約日", c.contract_date, "date")}${fi("publish_date", "公開日（契約期間の始まり）", c.publish_date, "date")}</div>
+    <div class="calc" id="calcBox"></div>
+    ${fck("signed", "契約書に署名をもらった", c.signed)}${fck("card_ok", "Squareにカードを登録してもらった", c.card_ok)}
+    ${fi("contract_file", "契約書の保管場所", c.contract_file, "text", "例：ドライブ VISION/契約書/〇〇.pdf")}
+    <div class="grid2">${fi("monthly", "月額（税込）", c.monthly, "number")}${fi("pay_day", "決済日（毎月）", c.pay_day, "number")}</div>
+    <h2>制作・公開</h2>
+    ${fck("waiting_material", "素材待ち（写真・ロゴ・メニューなど）", c.waiting_material)}
+    ${fi("material_note", "待っている物", c.material_note, "text", "例：外観写真とメニュー表")}
+    ${fi("site_url", "ホームページのURL", c.site_url, "url")}
+    <div class="grid2">${fi("slug", "お店フォルダ（vision-hp/sites）", c.slug, "text", "例：green")}${fi("domain", "独自ドメイン", c.domain, "text", "なしなら空欄")}</div>
+    <div class="grid2">${fi("domain_renew", "ドメイン更新日", c.domain_renew, "date")}${fck("gbp", "Googleマップとつないだ", c.gbp)}</div>
+    ${fta("memo", "メモ", c.memo)}`,
+    async v => {
+      if (!v.shop_name) { toast("店名を入れてください"); return false; }
+      const row = { ...(isNew ? {} : { id: c.id }), shop_name: v.shop_name, kind: v.kind, owner_name: v.owner_name, phone: v.phone, email: v.email, address: v.address,
+        contract_date: nul(v.contract_date), publish_date: nul(v.publish_date), signed: v.signed, card_ok: v.card_ok, contract_file: v.contract_file,
+        monthly: Number(v.monthly) || PRICE, pay_day: Number(v.pay_day) || 27, waiting_material: v.waiting_material, material_note: v.material_note,
+        material_since: v.waiting_material ? (c.material_since || iso(today())) : null, site_url: v.site_url, slug: nul(v.slug), domain: v.domain, domain_renew: nul(v.domain_renew), gbp: v.gbp, memo: v.memo };
+      if (isNew) row.status = "prep";
+      const saved = await save("customers", row);
+      if (isNew) { await log(saved.id, "system", "お客さんとして登録（契約）"); openId = saved.id; }
+      else if (c.publish_date !== row.publish_date) await log(c.id, "system", `公開日を ${jd(row.publish_date)} に`);
+      toast("保存しました");
+    }, { del: isNew ? null : async () => { await del("customers", c.id); openId = null; },
+      onChange: f => { const pd = f.querySelector("[name=publish_date]").value, box = f.querySelector("#calcBox");
+        if (!pd) { box.innerHTML = "公開日を入れると、満了日・申出締切・初回決済日が出ます"; return; }
+        const k = contract({ publish_date: pd }); box.innerHTML = `満了日 <b>${jd(iso(k.end))}</b>（5年）<br>継続の申出締切 <b>${jd(iso(k.noticeBy))}</b><br>初回の決済 <b>${jd(pd)}</b>、次から毎月27日`; } });
+}
+function changeStatus(c) {
+  sheet("状態を変える", `${fseg("status", "いまの状態", ST, c.status)}
+    <div class="muted small">・公開したら「公開中」　・未入金で止めたら「公開停止」（入金後に「公開中」へ）<br>・解約の申し出は、カルテ下の「解約の申し出を受けた」から（解約金を自動計算）</div>
+    ${fi("note", "ひとことメモ（任意）", "")}`,
+    async v => {
+      if (v.status === c.status) return;
+      const row = { id: c.id, status: v.status };
+      if (v.status === "live" && !c.publish_date) row.publish_date = iso(today());
+      await save("customers", row);
+      await log(c.id, "system", `状態：${ST[c.status]} → ${ST[v.status]}${v.note ? "（" + v.note + "）" : ""}`);
+      if (row.publish_date) toast("公開日を今日にしました（違うなら編集で直せます）");
+    });
+}
+function cancelFlow(c) {
+  sheet("解約の申し出を受けた", `${fi("notice", "申し出を受けた日（書面・メール）", iso(today()), "date")}
+    <div class="calc" id="cbox"></div>${fi("reason", "理由", "", "text", "例：閉店・他社へ・費用")}
+    <div class="muted small">保存すると状態が「解約予定」になり、解約金の入金待ちと後始末のチェックリストが出ます。</div>`,
+    async v => {
+      const p = cancelPlan(c, v.notice);
+      await save("customers", { id: c.id, status: "canceling", cancel_notice: v.notice, cancel_date: iso(p.cdate), cancel_reason: v.reason });
+      await log(c.id, "system", `解約の申し出（${jd(v.notice)}）。解約日 ${jd(iso(p.cdate))}・${p.fee ? "解約金 " + yen(p.fee) : p.note}${v.reason ? "・理由：" + v.reason : ""}`);
+    }, { ok: "解約予定にする", onChange: f => { const p = cancelPlan(c, f.querySelector("[name=notice]").value);
+      f.querySelector("#cbox").innerHTML = `解約日 <b>${jd(iso(p.cdate))}</b>（申し出から1か月）<br>${p.fee ? `解約金 <b>${yen(p.fee)}</b><br><span class="small">${p.note}。請求から30日以内に一括</span>` : p.note}`; } });
+}
+function payMonth(c, ym) {
+  const p = payOf(c.id, ym), r = dueMonths(c).find(x => x.ym === ym);
+  sheet(`${ymLabel(ym)}分の月額`, `<div class="muted" style="margin-bottom:10px">${r ? "決済日 " + jd(iso(r.due)) : "まだ発生していない月です"}</div>
+    ${fseg("status", "結果", PAYS, p ? p.status : "paid")}
+    <div class="grid2">${fi("amount", "金額", p ? p.amount : (c.monthly || PRICE), "number")}${fi("paid_at", "入金日", p ? p.paid_at : iso(today()), "date")}</div>
+    ${fsel("method", "方法", METH, p ? p.method : "square")}${fi("memo", "メモ", p ? p.memo : "", "text", "例：カード期限切れ→再決済")}`,
+    async v => {
+      await save("payments", { ...(p ? { id: p.id } : {}), customer_id: c.id, month: ym, kind: "monthly", status: v.status, amount: Number(v.amount) || 0, paid_at: nul(v.paid_at), method: v.method, memo: v.memo });
+      if (v.status === "failed") await log(c.id, "system", `${ymLabel(ym)}分の決済に失敗${v.memo ? "（" + v.memo + "）" : ""}`);
+      toast("つけました");
+    }, { del: p ? async () => del("payments", p.id) : null });
+}
+function addPayment(c, p) {
+  sheet(p ? "入金を直す" : "月額以外の入金", `${fsel("kind", "種類", Object.fromEntries(Object.entries(PAYK).filter(([k]) => k !== "monthly")), p ? p.kind : "extra")}
+    <div class="grid2">${fi("amount", "金額（税込）", p ? p.amount : "", "number")}${fi("month", "どの月の売上か", p ? p.month : ymOf(today()), "month")}</div>
+    ${fseg("status", "状態", { paid: "入金済み", failed: "未入金・失敗" }, p ? p.status : "paid")}
+    <div class="grid2">${fi("paid_at", "入金日", p ? p.paid_at : iso(today()), "date")}${fsel("method", "方法", METH, p ? p.method : "square")}</div>
+    ${fi("memo", "内容", p ? p.memo : "", "text", "例：メニューページ追加")}`,
+    async v => { if (!Number(v.amount)) { toast("金額を入れてください"); return false; }
+      await save("payments", { ...(p ? { id: p.id } : {}), customer_id: c.id, kind: v.kind, amount: Number(v.amount), month: v.month, status: v.status, paid_at: nul(v.paid_at), method: v.method, memo: v.memo }); },
+    { del: p ? async () => del("payments", p.id) : null });
+}
+function editRequest(r, cid) {
+  const isNew = !r; r = r || { customer_id: cid, source: "phone", kind: "small", counted: true, status: "assigned", received_at: new Date().toISOString() };
+  const custOpts = { "": "（未登録のお客さん）", ...Object.fromEntries(DB.customers.filter(c => c.status !== "closed").map(c => [c.id, c.shop_name])) };
+  const done = !reqOpen(r);
+  sheet(isNew ? "修正依頼を記録" : "修正依頼", `${fsel("customer_id", "お客さん", custOpts, r.customer_id || "")}
+    ${!isNew && r.line_name ? `<div class="muted small" style="margin:-6px 0 10px">LINEの名前：${esc(r.line_name)}（紐付けると、次からこの人のLINEは自動でこのお客さんに）</div>` : ""}
+    ${fseg("source", "どこから", SRC, r.source || "line")}
+    ${fi("received", "受けた日", iso(new Date(r.received_at)), "date")}
+    ${fta("body", "内容", r.body || r.summary || "", "例：年末年始のお休みを載せてほしい")}
+    ${fsel("kind", "種類", RKIND, r.kind || "small")}
+    ${fck("counted", "月2回に数える（同じ依頼が2通に分かれた時などは外す）", r.counted !== false)}
+    ${fi("fee", "見積もり・追加料金（円）", r.fee || "", "number")}
+    ${fck("done", "終わった", done)}`,
+    async v => {
+      const row = { ...(isNew ? {} : { id: r.id }), customer_id: nul(v.customer_id), source: v.source, body: v.body, kind: v.kind, counted: v.counted, fee: Number(v.fee) || null };
+      const rd = D(v.received); if (rd && iso(rd) !== iso(new Date(r.received_at))) row.received_at = new Date(rd.getFullYear(), rd.getMonth(), rd.getDate(), 9).toISOString();
+      if (v.done && !done) { row.status = "done"; row.done_at = new Date().toISOString(); } else if (!v.done && done) row.status = "assigned";
+      if (isNew) { row.received_at = row.received_at || r.received_at; row.status = row.status || "assigned"; }
+      await save("requests", row);
+      if (!isNew && v.customer_id && v.customer_id !== r.customer_id && r.line_user) {   // LINEの紐付け
+        await save("customers", { id: v.customer_id, line_user: r.line_user, line_name: r.line_name });
+        await log(v.customer_id, "system", `LINE「${r.line_name || ""}」を紐付け`);
+      }
+      if (isNew && row.customer_id) await log(row.customer_id, "system", `修正依頼（${SRC[v.source]}）：${v.body.slice(0, 40)}`);
+    }, { del: isNew ? null : async () => del("requests", r.id) });
+}
+function addEvent(c, e) {
+  sheet(e ? "記録を直す" : "連絡・出来事を記録", `${fseg("type", "種類", { call: "📞 電話", visit: "🚶 訪問", line: "💬 LINE", mail: "✉️ メール", memo: "📝 メモ", trouble: "⚠️ トラブル" }, e ? e.type : "call")}
+    ${fta("text", "内容", e ? e.text : "", "例：カード変更の連絡あり。新しいリンクを送った")}
+    ${fck("unresolved", "トラブルが未解決（解決するまで「今日やること」に出す）", e ? e.resolved === false : false)}`,
+    async v => { if (!v.text) { toast("内容を入れてください"); return false; }
+      await save("events", { ...(e ? { id: e.id } : { at: new Date().toISOString() }), customer_id: c.id, type: v.type, text: v.text, resolved: !(v.type === "trouble" && v.unresolved) }); },
+    { del: e ? async () => del("events", e.id) : null });
+}
+async function bulkPaid() {
+  const list = DB.customers.map(c => ({ c, r: dueMonths(c).find(x => x.ym === moneyYM) })).filter(x => x.r && x.r.passed && !payOf(x.c.id, moneyYM));
+  if (!list.length || !confirm(`${ymLabel(moneyYM)}分：${list.map(x => x.c.shop_name).join("・")} の${list.length}件を「入金済み」にします。Squareで全員の決済成功を確かめましたか？`)) return;
+  for (const { c, r } of list) await save("payments", { customer_id: c.id, month: moneyYM, kind: "monthly", status: "paid", amount: c.monthly || PRICE, paid_at: iso(r.due), method: "square" });
+  toast(`${list.length}件を入金済みにしました`); render();
+}
+
+/* ───── 操作 ───── */
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-tab],[data-open],[data-go],[data-back],[data-act],[data-filter],[data-rfilter],[data-ym],[data-pay],[data-payrow],[data-req],[data-ev],[data-copy]");
+  if (!t || t.closest(".sheet-bg")) return;
+  const c = openId ? cust(openId) : null, ds = t.dataset;
+  if (ds.tab) { tab = ds.tab; openId = null; render(); }
+  else if (ds.copy !== undefined) copy(ds.copy);
+  else if (ds.open) { window.__ret = window.scrollY; openId = ds.open; render(); }
+  else if (ds.go) { if (ds.go === "req") { tab = "req"; openId = null; reqFilter = "open"; } else openId = ds.go; render(); }
+  else if (ds.back !== undefined) { openId = null; window.__keep = window.__ret || 0; render(); }
+  else if (ds.filter) { filter = ds.filter; render(); }
+  else if (ds.rfilter) { reqFilter = ds.rfilter; render(); }
+  else if (ds.ym) { moneyYM = ymAdd(moneyYM, Number(ds.ym)); render(); }
+  else if (ds.pay && c) payMonth(c, ds.pay);
+  else if (ds.payrow && c) addPayment(c, DB.payments.find(p => p.id === ds.payrow));
+  else if (ds.req) editRequest(DB.requests.find(r => r.id === ds.req));
+  else if (ds.ev && c) addEvent(c, DB.events.find(x => x.id === ds.ev));
+  else if (ds.act) ({ newCust: () => editCustomer(), editCust: () => editCustomer(c), status: () => changeStatus(c), cancel: () => cancelFlow(c),
+    addPay: () => addPayment(c), addReq: () => editRequest(null, c.id), addEv: () => addEvent(c), bulkPaid })[ds.act]();
+});
+document.addEventListener("change", async e => {
+  const cb = e.target.closest("[data-close]"); if (!cb || !openId) return;
+  const c = cust(openId), co = { ...(c.closeout || {}), [cb.dataset.close]: cb.checked };
+  try { await save("customers", { id: c.id, closeout: co }); window.__keep = window.scrollY; render(); } catch (err) { toast("保存できませんでした"); }
+});
+document.addEventListener("input", e => { if (e.target.id === "q") { q = e.target.value; const pos = e.target.selectionStart; render(); const i = $("#q"); i.focus(); i.setSelectionRange(pos, pos); } });
+
+/* ───── 見本データ（?demo=1・保存はされない） ───── */
+function demoData() {
+  const T = today(), d = n => iso(addD(T, n)), m = n => iso(addM(T, n)), ym = n => ymAdd(ymOf(T), n);
+  const C = [
+    { id: "d1", shop_name: "hair room ミルラ", kind: "美容室", owner_name: "見本 花子", phone: "000-0000-0001", address: "埼玉県東松山市箭弓町1丁目", status: "live", contract_date: m(-15), publish_date: m(-14), signed: true, card_ok: true, site_url: "https://vhp-sample-salon.pages.dev", slug: "sample-salon", gbp: true, line_user: "U1", line_name: "はなこ", monthly: 5000, pay_day: 27 },
+    { id: "d2", shop_name: "そば処 見本庵", kind: "飲食", owner_name: "見本 太郎", phone: "000-0000-0002", address: "埼玉県坂戸市", status: "live", contract_date: m(-7), publish_date: m(-6), signed: true, card_ok: true, site_url: "https://vhp-sample-food.pages.dev", slug: "sample-food", domain: "mihonan.example", domain_renew: d(20), monthly: 5000, pay_day: 27 },
+    { id: "d3", shop_name: "木工房 ためし", kind: "工務店", owner_name: "見本 次郎", status: "live", contract_date: m(-4), publish_date: m(-3), signed: true, card_ok: true, slug: "sample-craft", monthly: 5000, pay_day: 27 },
+    { id: "d4", shop_name: "整体院 みほん", kind: "整体", owner_name: "見本 三郎", status: "prep", contract_date: d(-9), publish_date: d(5), signed: true, card_ok: false, waiting_material: true, material_note: "外観写真とメニュー表", material_since: d(-9), monthly: 5000, pay_day: 27 },
+    { id: "d5", shop_name: "カフェ ためしや", kind: "カフェ", owner_name: "見本 四郎", status: "canceling", contract_date: m(-26), publish_date: m(-25), signed: true, card_ok: true, cancel_notice: d(-10), cancel_date: iso(addM(addD(T, -10), 1)), cancel_reason: "閉店", monthly: 5000, pay_day: 27, closeout: {} },
+    { id: "d6", shop_name: "花屋 見本園", kind: "花屋", status: "closed", contract_date: m(-70), publish_date: m(-66), signed: true, card_ok: true, cancel_notice: m(-4), cancel_date: m(-3), cancel_reason: "満了後に自社で運用", monthly: 5000, pay_day: 27, closeout: { square: true, site: true } },
+  ];
+  const DB2 = { customers: C, payments: [], requests: [], events: [] };
+  const pay = (cid, y, status = "paid", amount = 5000, kind = "monthly", memo = "") => DB2.payments.push({ id: uid(), customer_id: cid, month: y, kind, amount, status, method: "square", paid_at: y + "-27", memo });
+  for (const c of C) {
+    if (!c.publish_date) continue;
+    for (const r of (() => { DB = DB2; return dueMonths(c); })()) {
+      if (!r.passed) continue;
+      if (c.id === "d2" && r.ym === ym(0)) continue;                         // 今月確認待ち
+      if (c.id === "d3" && (r.ym === ym(-1) || r.ym === ym(0))) { if (r.ym === ym(-1)) pay(c.id, r.ym, "failed", 5000, "monthly", "カード期限切れ"); continue; }
+      pay(c.id, r.ym);
+    }
+  }
+  pay("d1", ym(-2), "paid", 15000, "extra", "メニューページ追加");
+  pay("d5", ym(0), "failed", 5000 * 34, "cancel_fee", "解約金（請求済み・入金待ち）");
+  const q = (cid, days, body, status, extra = {}) => DB2.requests.push({ id: uid(), customer_id: cid, line_user: cid ? null : "U9", line_name: cid ? null : "やまだ", source: "line", body, summary: body, kind: "small", counted: true, status, received_at: addD(T, days).toISOString(), ...extra });
+  q("d1", -12, "年末年始のお休みを載せてほしい", "done");
+  q("d1", -5, "カットの料金を4,400円に変更", "done");
+  q("d1", -1, "スタッフ紹介の写真を差し替えたい", "await_ok");
+  q("d2", -6, "新メニュー「鴨せいろ」を追加", "assigned");
+  q(null, 0, "営業時間を変えたいです", "new");
+  DB2.events.push({ id: uid(), customer_id: "d3", type: "call", text: "決済失敗の件で電話。カードを作り直し中、今週中に再登録すると", at: addD(T, -3).toISOString(), resolved: true });
+  DB2.events.push({ id: uid(), customer_id: "d1", type: "trouble", text: "Googleマップの営業時間がHPと違うと言われた", at: addD(T, -1).toISOString(), resolved: false });
+  DB2.events.push({ id: uid(), customer_id: "d1", type: "system", text: "お客さんとして登録（契約）", at: addM(T, -15).toISOString(), resolved: true });
+  return DB2;
+}
+
+/* ───── 起動 ───── */
+function gate(msg = "") {
+  $("#app").innerHTML = `<div class="gate"><img src="icon-192.png" alt=""><div class="en" style="color:var(--gold2)">VISION</div><div style="font-size:20px;font-weight:700">お客さんカルテ</div>
+    <div style="font-size:13px;color:var(--gold2)">${msg || "営業地図と同じ合言葉を入れてください"}</div>
+    <input id="k" type="password" autocomplete="off" placeholder="合言葉"><button class="btn gold" id="go">ひらく</button>
+    <a href="?demo=1" style="color:var(--gold2);font-size:13px">見本データで見る</a></div>`;
+  $("#go").onclick = () => { key = $("#k").value.trim(); store.set("vmap_key", key); boot(); };
+}
+async function boot() {
+  if (!DEMO && !key) return gate();
+  $("#app").innerHTML = `<div class="gate"><img src="icon-192.png" alt=""><div style="color:var(--gold2)">読み込み中…</div></div>`;
+  try { await loadAll(); render(); }
+  catch (e) { gate("読み込めませんでした（合言葉が違う？）"); }
+}
+if ("serviceWorker" in navigator && !DEMO) navigator.serviceWorker.register("sw.js").catch(() => {});
+boot();
+</script>
+</body>
+</html>
