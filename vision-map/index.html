@@ -210,8 +210,8 @@ function speak(text) {
 }
 // 士業ルート＝talk.js（名乗りは不動産の会社）／システム営業＝sales_talk.js（名乗りは合同会社VISION）
 const TALK_SETS = {
-  "士業": { data: () => TALK, title: "士業の先生への初訪トーク", parts: [["qualify", "⓪ まず見極め：不動産が関わる案件があるか（受付でも先生でも最初に聞く）", 1], ["ifyes", "　→ ある時"], ["ifno", "　→ ない時（長く話さない）"], ["reception", "① 受付で（30秒・資料を渡すだけ）", 1], ["sensei", "② 先生に会えた時（3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["leave", "⑤ 置いていく物"], ["caution", "⚠ 注意"]] },
-  "システム": { data: () => SALES_TALK, title: "システム営業の訪問トーク", parts: [["opening", "① 入口で（30秒・忙しそうなら資料を置いて帰る）", 1], ["talk", "② 話を聞いてもらえた時（2〜3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["objection", "⑤ 断られた時の返し"]] },
+  "士業": { data: () => TALK, title: "士業の先生への初訪トーク", parts: [["qualify", "⓪ まず見極め：不動産が関わる案件があるか（受付でも先生でも最初に聞く）", 1], ["ifyes", "　→ ある時"], ["ifno", "　→ ない時（長く話さない）"], ["reception", "① 受付で（30秒・資料を渡すだけ）", 1], ["sensei", "② 先生に会えた時（3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["leave", "⑤ 置いていく物"], ["caution", "⚠ 注意"], ["learned", "⑥ 現場で分かったこと（言われたこと→返し・響いた言葉）", 1]] },
+  "システム": { data: () => SALES_TALK, title: "システム営業の訪問トーク", parts: [["opening", "① 入口で（30秒・忙しそうなら資料を置いて帰る）", 1], ["talk", "② 話を聞いてもらえた時（2〜3分）", 1], ["words", "③ 響くワード"], ["ask", "④ 聞くこと（質問）"], ["objection", "⑤ 断られた時の返し"], ["learned", "⑥ 現場で分かったこと（言われたこと→返し・響いた言葉）", 1]] },
 };
 function openTalk(type, placeName, setName) {
   setName = setName || get("vmap_talkset") || "システム"; set("vmap_talkset", setName);
@@ -233,7 +233,7 @@ function openTalk(type, placeName, setName) {
   $("#x").onclick = () => { speechSynthesis?.cancel(); s.classList.remove("on"); };
   s.querySelectorAll("[data-set]").forEach(b => b.onclick = () => openTalk("共通", placeName, b.dataset.set));
   s.querySelectorAll("[data-t]").forEach(b => b.onclick = () => openTalk(b.dataset.t, placeName, setName));
-  s.querySelectorAll("[data-say]").forEach(b => b.onclick = () => speak(fill(T[b.dataset.say])));
+  s.querySelectorAll("[data-say]").forEach(b => b.onclick = () => { const v = T[b.dataset.say]; speak(fill(Array.isArray(v) ? v.join("。　") : v)); });
   s.querySelectorAll("[data-stop]").forEach(b => b.onclick = () => speechSynthesis?.cancel());
   if ($("#co")) $("#co").onclick = () => { const c = prompt("先生に名乗る会社名（不動産の話なので宅建業の会社名）", company()); if (c) { set("vmap_company", c.trim()); openTalk(type, placeName, setName); } };
   $("#rt").onchange = e => set("vmap_rate", e.target.value);
